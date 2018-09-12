@@ -1,0 +1,17 @@
+<configuration>
+
+    <property name="PATTERN" value="%d{HH:mm:ss.SSSX} [%thread] %-5level %logger{36} - %msg%n"/>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="ut.ee.xtorrent" level="${xtorrent.logging.level:-INFO}"/>
+
+    <root level="${vmar.logging.level:-INFO}">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+</configuration>
