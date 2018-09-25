@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import javax.annotation.PreDestroy;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"ut.ee.xtorrent"})
 public class TrackerApplication {
 
     private static final Logger log = LoggerFactory.getLogger(TrackerApplication.class);
