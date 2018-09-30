@@ -3,10 +3,12 @@ package ut.ee.xtorrent.client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
+import ut.ee.xtorrent.common.torrentfile.TorrentFile;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 @Configuration
 public class ClientConfiguration {
@@ -21,13 +23,13 @@ public class ClientConfiguration {
 
     private void torretFilesTest() {
         log.info("Torrent files testing started");
-        for (TorrentFIle torrent: getFolderTorrentFiles("client/src/main/resources/torrent_files")) {
+        for (TorrentFile torrent : getFolderTorrentFiles("common/src/main/resources/test_torrent_files")) {
             log.info(torrent.toString());
         }
     }
 
-    private ArrayList<TorrentFIle> getFolderTorrentFiles(String folderPath){               //gives only torrent files (not others)
-        ArrayList<TorrentFIle> torrentFiles = new ArrayList<>();
+    private List<TorrentFile> getFolderTorrentFiles(String folderPath) {
+        List<TorrentFile> torrentFiles = new ArrayList<>();
         File folder = new File(folderPath);
         File[] listOfFiles = folder.listFiles();
 
@@ -36,7 +38,7 @@ public class ClientConfiguration {
                 for (File file : listOfFiles) {
                     if (isTorrentFile(file.getName())) {
                         String fileLocation = folderPath + "/" + file.getName();
-                        torrentFiles.add(new TorrentFIle(fileLocation));
+                        torrentFiles.add(new TorrentFile(fileLocation));
                     }
                 }
             } catch (IOException e) {
@@ -46,8 +48,8 @@ public class ClientConfiguration {
         return torrentFiles;
     }
 
-    private boolean isTorrentFile(String filename) {
-        return filename.split("\\.")[1].equals("torrent");
+    private boolean isTorrentFile(String fileName) {
+        return fileName.endsWith(".torrent");
     }
 
 }

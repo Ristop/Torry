@@ -11,6 +11,18 @@
 
     <artifactId>common</artifactId>
 
+    <properties>
+        <bencode.version>1.2.1</bencode.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.dampcake</groupId>
+            <artifactId>bencode</artifactId>
+            <version>${bencode.version}</version>
+        </dependency>
+    </dependencies>
+
     <build>
         <finalName>xtorrent-common</finalName>
     </build>
