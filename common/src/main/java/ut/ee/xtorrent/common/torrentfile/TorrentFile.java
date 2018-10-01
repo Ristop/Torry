@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -30,8 +29,7 @@ public class TorrentFile {
     private final String createdBy;
     private final String encoding;
 
-    public TorrentFile(String filePath) throws IOException {
-        Path path = Paths.get(filePath);
+    public TorrentFile(Path path) throws IOException {
         TorrentFileParser parser = new TorrentFileParser(Files.readAllBytes(path));
 
         this.torrentFileInfo = parser.getTorrentFileInfo();
