@@ -22,6 +22,6 @@ This repository contains an implementation of BitTorrent specification (https://
 Requires Java 8
 
 ### Tracker
-* `java -jar vmar-service/target/xtorrent-tracker-*.jar`
+* `java -jar tracker/target/xtorrent-tracker-*.jar`
 ### Client
-* `java -jar vmar-helix/target/xtorrent-client-*.jar`
+* `java -jar client/target/xtorrent-client-*.jar`
