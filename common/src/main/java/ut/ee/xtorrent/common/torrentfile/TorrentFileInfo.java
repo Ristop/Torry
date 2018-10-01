@@ -14,6 +14,8 @@ public class TorrentFileInfo {
     public TorrentFileInfo(Map<String, Object> info) {
         this.pieceLength = (long) info.get("piece length");
         this.isPrivate = info.containsKey("private") && (boolean) info.get("private");
+
+        // need to parse this correctly (omitting it from toString for now)
         this.pieces = (String) info.get("pieces");
 
         if (info.containsKey("length")) {
@@ -51,7 +53,7 @@ public class TorrentFileInfo {
     public String toString() {
         return "TorrentFileInfo{" +
                 "pieceLength=" + pieceLength +
-                ", pieces='" + pieces + '\'' +
+//                ", pieces='" + pieces + '\'' +
                 ", isPrivate=" + isPrivate +
                 ", infoDict=" + infoDict +
                 ", singleFile=" + singleFile +

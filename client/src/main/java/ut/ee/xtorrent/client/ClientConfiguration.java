@@ -25,7 +25,10 @@ public class ClientConfiguration {
 
         try (TorrentFileReader reader = new TorrentFileReader("common/src/main/resources/test_torrent_files")) {
             Set<TorrentFile> torrentFiles = reader.readTorrentFiles();
-            torrentFiles.forEach(tf -> System.out.println("Read torrent file: " + tf));
+
+            for (TorrentFile tf : torrentFiles) {
+                log.info("Read torrent file: {}.", tf);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }

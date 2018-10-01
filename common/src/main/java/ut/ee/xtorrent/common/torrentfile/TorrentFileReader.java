@@ -45,7 +45,7 @@ public class TorrentFileReader implements AutoCloseable {
     }
 
     private boolean isTorrentFile(String fileName) {
-        return FilenameUtils.getExtension(fileName).equals(".torrent");
+        return FilenameUtils.getExtension(fileName).equals("torrent");
     }
 
     @Override
