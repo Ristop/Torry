@@ -26,12 +26,14 @@ public class TrackerController {
             @RequestParam(value = "left") String left,
             @RequestParam(value = "compact", defaultValue = "false") boolean compact,
             @RequestParam(value = "no_peer_id") String noPeerId,
-            @RequestParam(value = "event") String event,
+            @RequestParam(value = "event") String eventName,
             @RequestParam(value = "ip", required = false) String ip,
             @RequestParam(value = "numwant", required = false) String numwant,
             @RequestParam(value = "key", required = false) String key,
             @RequestParam(value = "tracker_id", required = false) String trackerId
     ) {
+
+        Event event = Event.getEvent(eventName);
 
         // number of peers with the entire file (seeders)
         int complete = 0;
