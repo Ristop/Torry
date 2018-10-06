@@ -26,6 +26,11 @@
             <artifactId>bencode</artifactId>
             <version>${bencode.version}</version>
         </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.11</version>
+        </dependency>
     </dependencies>
 
 </project>
