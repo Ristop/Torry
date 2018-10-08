@@ -1,7 +1,7 @@
-package ut.ee.xtorrent.common;
+package ut.ee.xtorrent.tracker;
 
-import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class TrackerResponse {
 
@@ -10,9 +10,9 @@ public class TrackerResponse {
     private final Integer interval;
     private final Integer minInterval;
     private final String trackerId;
-    private final Integer complete;
-    private final Integer incomplete;
-    private final List<Peer> peers;
+    private final Long complete;
+    private final Long incomplete;
+    private final Set<Peer> peers;
 
     private TrackerResponse(TrackerResponseBuilder trb) {
         this.failureReason = trb.getFailureReason();
@@ -45,15 +45,15 @@ public class TrackerResponse {
         return trackerId;
     }
 
-    public Integer getComplete() {
+    public Long getComplete() {
         return complete;
     }
 
-    public Integer getIncomplete() {
+    public Long getIncomplete() {
         return incomplete;
     }
 
-    public List<Peer> getPeers() {
+    public Set<Peer> getPeers() {
         return peers;
     }
 
@@ -68,9 +68,9 @@ public class TrackerResponse {
         private Integer interval;
         private Integer minInterval;
         private String trackerId;
-        private Integer complete;
-        private Integer incomplete;
-        private List<Peer> peers;
+        private Long complete;
+        private Long incomplete;
+        private Set<Peer> peers;
 
         public TrackerResponseBuilder setFailureReason(String failureReason) {
             this.failureReason = failureReason;
@@ -97,17 +97,17 @@ public class TrackerResponse {
             return this;
         }
 
-        public TrackerResponseBuilder setComplete(int complete) {
+        public TrackerResponseBuilder setComplete(long complete) {
             this.complete = complete;
             return this;
         }
 
-        public TrackerResponseBuilder setIncomplete(int incomplete) {
+        public TrackerResponseBuilder setIncomplete(long incomplete) {
             this.incomplete = incomplete;
             return this;
         }
 
-        public TrackerResponseBuilder setPeers(List<Peer> peers) {
+        public TrackerResponseBuilder setPeers(Set<Peer> peers) {
             this.peers = peers;
             return this;
         }
@@ -136,15 +136,15 @@ public class TrackerResponse {
             return trackerId;
         }
 
-        public Integer getComplete() {
+        public Long getComplete() {
             return complete;
         }
 
-        public Integer getIncomplete() {
+        public Long getIncomplete() {
             return incomplete;
         }
 
-        public List<Peer> getPeers() {
+        public Set<Peer> getPeers() {
             return peers;
         }
     }

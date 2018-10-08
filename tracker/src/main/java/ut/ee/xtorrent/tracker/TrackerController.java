@@ -1,17 +1,21 @@
 package ut.ee.xtorrent.tracker;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import ut.ee.xtorrent.common.Peer;
-import ut.ee.xtorrent.common.TrackerResponse;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/tracker")
 public class TrackerController {
+
+    private static final Logger log = LoggerFactory.getLogger(TrackerController.class);
+
+    private static Map<String, TrackedState> trackedTorrents = new HashMap<>();
 
     private static final String TRACKER_ID = "1";
     private static final int DEFAULT_INTERVAL = 60;
@@ -37,35 +41,41 @@ public class TrackerController {
             @RequestParam(value = "info_hash") String infoHash,
             @RequestParam(value = "peer_id") String peerId,
             @RequestParam(value = "port") int port,
-            @RequestParam(value = "uploaded") String uploaded,
-            @RequestParam(value = "downloaded") String downloaded,
-            @RequestParam(value = "left") String left,
+            @RequestParam(value = "uploaded") long uploaded,
+            @RequestParam(value = "downloaded") long downloaded,
+            @RequestParam(value = "left") long left,
             @RequestParam(value = "compact", defaultValue = "false") boolean compact,
-            @RequestParam(value = "no_peer_id") String noPeerId,
+            @RequestParam(value = "no_peer_id", required = false) String noPeerId,
             @RequestParam(value = "event", required = false) String eventName,
             @RequestParam(value = "ip", required = false) String ip,
             @RequestParam(value = "numwant", required = false) String numwant,
             @RequestParam(value = "key", required = false) String key,
             @RequestParam(value = "tracker_id", required = false) String trackerId
     ) {
-        if (eventName != null) {
-            Event event = Event.getEvent(eventName);
+        if (!trackedTorrents.containsKey(infoHash)) {
+            trackedTorrents.put(infoHash, new TrackedState(infoHash));
         }
 
-        // number of peers with the entire file (seeders)
-        int complete = 0;
+        TrackedState state = trackedTorrents.get(infoHash);
 
-        // number of non-seeder peers (leechers)
-        int incomplete = 0;
+        Event event = eventName != null ? Event.getEvent(eventName) : Event.REPEATING;
 
-        List<Peer> peers = new ArrayList<>();
+        if (event == Event.START) {
+            state.addPeer(new Peer(peerId, port, left));
+        } else if (event == Event.COMPLETE) {
+            state.setPeerComplete(peerId);
+        } else if (event == Event.STOP) {
+            state.removePeer(peerId);
+        } else if (event == Event.REPEATING) {
+            state.updatePeer(peerId, uploaded, downloaded, left);
+        }
 
         return TrackerResponse.builder()
                 .setInterval(DEFAULT_INTERVAL)
                 .setTrackerId(TRACKER_ID)
-                .setComplete(complete)
-                .setIncomplete(incomplete)
-                .setPeers(peers)
+                .setComplete(state.getCompleted())
+                .setIncomplete(state.getInComplete())
+                .setPeers(state.getPeers(peerId))
                 .build();
     }
 
