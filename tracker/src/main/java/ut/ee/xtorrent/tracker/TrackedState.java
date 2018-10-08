@@ -34,7 +34,9 @@ public class TrackedState {
     }
 
     public void setPeerComplete(String peerId) {
-        peers.get(peerId).setLeft(0);
+        Peer peer = peers.get(peerId);
+        peer.setDownloaded(peer.getDownloaded() + peer.getLeft());
+        peer.setLeft(0);
     }
 
     public void removePeer(String peerId) {
@@ -44,8 +46,8 @@ public class TrackedState {
     public void updatePeer(String peerId, long uploaded, long downloaded, long left) {
         Peer peer = peers.get(peerId);
         peer.setUploaded(uploaded);
-        peer.setDownloaded(uploaded);
-        peer.setLeft(uploaded);
+        peer.setDownloaded(downloaded);
+        peer.setLeft(left);
     }
 
 }
