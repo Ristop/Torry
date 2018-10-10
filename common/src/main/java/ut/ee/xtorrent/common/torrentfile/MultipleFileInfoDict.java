@@ -7,6 +7,7 @@ import java.util.Map;
 public class MultipleFileInfoDict extends InfoDict {
 
     private final List<FileEntry> files;
+    private final String name;               //name of the main directory
 
     @SuppressWarnings("unchecked")
     public MultipleFileInfoDict(Map<String, Object> info) {
@@ -19,6 +20,7 @@ public class MultipleFileInfoDict extends InfoDict {
             fileEntries.add(new FileEntry(fileEntry));
         }
         this.files = fileEntries;
+        this.name = (String) info.get("name");
     }
 
     public List<FileEntry> getFiles() {
@@ -28,7 +30,8 @@ public class MultipleFileInfoDict extends InfoDict {
     @Override
     public String toString() {
         return "MultipleFileInfoDict{" +
-                "files=" + files +
+                "name=" + name +
+                ", files=" + files +
                 '}';
     }
 
