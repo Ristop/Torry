@@ -1,19 +1,16 @@
 package ut.ee.xtorrent.common.torrentfile;
 
-import com.dampcake.bencode.Bencode;
-import com.dampcake.bencode.Type;
+import bencoding.Reader;
+import bencoding.types.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class TorrentFile {
 
@@ -30,7 +27,7 @@ public class TorrentFile {
     private final String encoding;
 
     public TorrentFile(Path path) throws IOException {
-        TorrentFileParser parser = new TorrentFileParser(Files.readAllBytes(path));
+        TorrentFileParser parser = new TorrentFileParser(path.toString());
 
         this.torrentFileInfo = parser.getTorrentFileInfo();
         this.announce = parser.getAnnounce();
@@ -112,27 +109,79 @@ public class TorrentFile {
         private final String createdBy;
         private final String encoding;
 
-        @SuppressWarnings("unchecked")
-        public TorrentFileParser(byte[] bytes) {
-            Map<String, Object> dict = getDecodedMap(bytes);
+        public TorrentFileParser(String path) throws IOException{
+            Reader r = new Reader(new File(path));
+            List<IBencodable> fileContent = r.read();
 
-            Map<String, Object> info = (Map<String, Object>) dict.get("info");
-            this.torrentFileInfo = new TorrentFileInfo(info);
+            // A valid torrentfile should only return a single dictionary.
+            if (fileContent.size() != 1)
+                throw new RuntimeException("Torrent file is not valid");
 
-            this.announce = (String) dict.get("announce");
+            BDictionary torrentDictionary = (BDictionary) fileContent.get(0);
+            BDictionary infoDictionary = (BDictionary) torrentDictionary.find(new BByteString("info"));
+
+            this.torrentFileInfo = new TorrentFileInfo(infoDictionary);
+            this.announce = torrentDictionary.find(new BByteString("announce")).toString();
 
             // optional parameters
-            this.announceList = (List<String>) dict.getOrDefault("announce-list", null);
-            this.creationDate = dict.containsKey("creation-date") ? Instant.parse((String) dict.get("creation-date")) : null;
-            this.comment = dict.containsKey("comment") ? (String) dict.get("comment") : null;
-            this.createdBy = dict.containsKey("created-by") ? (String) dict.get("created-by") : null;
-            this.encoding = dict.containsKey("encoding") ? (String) dict.get("encoding") : null;
+            this.announceList = parseAnnounceList(torrentDictionary);
+            this.creationDate = parseCreationDate(torrentDictionary);
+            this.comment = parseComment(torrentDictionary);
+            this.createdBy = parseCreatedBy(torrentDictionary);
+            this.encoding = parseEncoding(torrentDictionary);
         }
 
-        private Map<String, Object> getDecodedMap(byte[] bytes) {
-            Bencode bencode = new Bencode(UTF_8);
-            return bencode.decode(bytes, Type.DICTIONARY);
+        // method taken completly from https://github.com/m1dnight/torrent-parser
+        // some other methods also got inspired from that link.
+        private List<String> parseAnnounceList(BDictionary dict) {
+            if (dict.find(new BByteString("announce-list")) != null)
+            {
+                List<String> announceUrls = new LinkedList<String>();
+
+                BList announceList = (BList) dict.find(new BByteString("announce-list"));
+                Iterator<IBencodable> subLists = announceList.getIterator();
+                while (subLists.hasNext())
+                {
+                    BList subList = (BList) subLists.next();
+                    Iterator<IBencodable> elements = subList.getIterator();
+                    while (elements.hasNext())
+                    {
+                        // Assume that each element is a BByteString
+                        BByteString tracker = (BByteString) elements.next();
+                        announceUrls.add(tracker.toString());
+                    }
+                }
+                return announceUrls;
+            } else
+            {
+                return null;
+            }
         }
+
+        private Instant parseCreationDate(BDictionary dict) {
+            if (dict.find(new BByteString("creation date")) != null)
+                return Instant.parse(dict.find(new BByteString("creation date")).toString());
+            return null;
+        }
+
+        private String parseComment(BDictionary dict) {
+            if (dict.find(new BByteString("comment")) != null)
+                return dict.find(new BByteString("comment")).toString();
+            return null;
+        }
+
+        private String parseCreatedBy(BDictionary dict) {
+            if (dict.find(new BByteString("created-by")) != null)
+                return dict.find(new BByteString("created-by")).toString();
+            return null;
+        }
+
+        private String parseEncoding(BDictionary dict) {
+            if (dict.find(new BByteString("encoding")) != null)
+                return dict.find(new BByteString("encoding")).toString();
+            return null;
+        }
+
 
         public TorrentFileInfo getTorrentFileInfo() {
             return torrentFileInfo;

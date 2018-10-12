@@ -1,24 +1,31 @@
 package ut.ee.xtorrent.common.torrentfile;
 
+import bencoding.types.*;
+
+
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 public class MultipleFileInfoDict extends InfoDict {
 
     private final List<FileEntry> files;
 
-    @SuppressWarnings("unchecked")
-    public MultipleFileInfoDict(Map<String, Object> info) {
-        super(info);
+    public MultipleFileInfoDict(BDictionary infoDict) {
+        super(infoDict);
+        this.files = parseFiles(infoDict);
+    }
 
-        List<Map<String, Object>> files = (List<Map<String, Object>>) info.get("files");
+    private List<FileEntry> parseFiles(BDictionary infoDict){
+        BList filesBList = (BList) infoDict.find(new BByteString("files"));
 
+        Iterator<IBencodable> filesIterator = filesBList.getIterator();
         List<FileEntry> fileEntries = new ArrayList<>();
-        for (Map<String, Object> fileEntry : files) {
-            fileEntries.add(new FileEntry(fileEntry));
+        while (filesIterator.hasNext()) {
+            BDictionary fileDict = (BDictionary) filesIterator.next();
+            fileEntries.add(new FileEntry(fileDict));
         }
-        this.files = fileEntries;
+        return fileEntries;
     }
 
     public List<FileEntry> getFiles() {

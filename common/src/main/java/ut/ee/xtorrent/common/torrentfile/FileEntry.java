@@ -1,7 +1,10 @@
 package ut.ee.xtorrent.common.torrentfile;
 
+import bencoding.types.*;
+
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 public class FileEntry {
@@ -10,11 +13,25 @@ public class FileEntry {
     private final String md5sum;
     private final String path;
 
-    @SuppressWarnings("unchecked")
-    public FileEntry(Map<String, Object> fileEntry) {
-        this.length = (long) fileEntry.get("length");
-        this.md5sum = fileEntry.containsKey("md5sum") ? (String) fileEntry.get("md5sum") : null;
-        this.path = String.join("", (List<String>) fileEntry.get("path"));
+    public FileEntry(BDictionary fileEntry) {
+        this.length = ((BInt) fileEntry.find(new BByteString("length"))).getValue();
+        this.md5sum = parseMd5sum(fileEntry);
+        this.path = parsePath(fileEntry);
+    }
+
+    private String parseMd5sum(BDictionary dict) {
+        if (dict.find(new BByteString("md5sum")) != null)
+            return dict.find(new BByteString("md5sum")).toString();
+        return null;
+    }
+
+    private String parsePath(BDictionary dict) {
+        BList filePaths = (BList) dict.find(new BByteString("path"));
+        List<String> pathContent = new ArrayList<>();
+        Iterator<IBencodable> pathIterator = filePaths.getIterator();
+        while (pathIterator.hasNext())
+            pathContent.add(pathIterator.next().toString());
+        return String.join("/", pathContent);
     }
 
     public long getLength() {
