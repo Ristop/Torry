@@ -1,13 +1,15 @@
 package ut.ee.xtorrent.client;
 
+import be.christophedetroyer.torrent.TorrentParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
-import ut.ee.xtorrent.common.torrentfile.TorrentFile;
-import ut.ee.xtorrent.common.torrentfile.TorrentFileReader;
 
 import java.io.IOException;
-import java.util.Set;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.stream.Stream;
 
 @Configuration
 public class ClientConfiguration {
@@ -23,12 +25,17 @@ public class ClientConfiguration {
     private void readTorrentFiles() {
         log.info("Torrent files testing started");
 
-        try (TorrentFileReader reader = new TorrentFileReader("common/src/main/resources/test_torrent_files")) {
-            Set<TorrentFile> torrentFiles = reader.readTorrentFiles();
-
-            for (TorrentFile tf : torrentFiles) {
-                log.info("Read torrent file: {}.", tf);
-            }
+        try (Stream<Path> paths = Files.walk(Paths.get("common/src/main/resources/test_torrent_files"))) {
+            paths
+                    .filter(Files::isRegularFile)
+                    .forEach(f -> {
+                        try {
+                            System.out.println(TorrentParser.parseTorrent(f.toString()));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    })
+            ;
         } catch (IOException e) {
             e.printStackTrace();
         }
