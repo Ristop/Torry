@@ -15,7 +15,7 @@ This repository contains an implementation of BitTorrent specification (https://
 
 ## Building the project
 
-`mvn clean package`
+In order to build the project you need to clone https://github.com/Ristop/torrent-parser and run `mvn clean install` on torrent-parser project. After this you can build XTorrent by invoking `mvn clean package` on XTorrent project.
 
 ## Running the project
 
