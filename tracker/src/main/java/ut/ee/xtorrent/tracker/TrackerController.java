@@ -2,12 +2,12 @@ package ut.ee.xtorrent.tracker;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
-import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/tracker")
@@ -15,10 +15,15 @@ public class TrackerController {
 
     private static final Logger log = LoggerFactory.getLogger(TrackerController.class);
 
-    private static Map<String, TrackedState> trackedTorrents = new HashMap<>();
-
     private static final String TRACKER_ID = "1";
     private static final int DEFAULT_INTERVAL = 60;
+
+    private final TrackedTorrentService torrentService;
+
+    @Autowired
+    public TrackerController(TrackedTorrentService torrentService) {
+        this.torrentService = torrentService;
+    }
 
     /**
      * @param infoHash   urlencoded 20-byte SHA1 hash of the value of the info key from the Metainfo file.
@@ -38,6 +43,7 @@ public class TrackerController {
      */
     @RequestMapping("/announce")
     public TrackerResponse announce(
+            HttpServletRequest request,
             @RequestParam(value = "info_hash") String infoHash,
             @RequestParam(value = "peer_id") String peerId,
             @RequestParam(value = "port") int port,
@@ -52,31 +58,11 @@ public class TrackerController {
             @RequestParam(value = "key", required = false) String key,
             @RequestParam(value = "tracker_id", required = false) String trackerId
     ) {
-        if (!trackedTorrents.containsKey(infoHash)) {
-            trackedTorrents.put(infoHash, new TrackedState(infoHash));
-        }
-
-        TrackedState state = trackedTorrents.get(infoHash);
-
-        Event event = eventName != null ? Event.getEvent(eventName) : Event.REPEATING;
-
-        if (event == Event.START) {
-            state.addPeer(new Peer(peerId, port, left));
-        } else if (event == Event.COMPLETE) {
-            state.setPeerComplete(peerId);
-        } else if (event == Event.STOP) {
-            state.removePeer(peerId);
-        } else if (event == Event.REPEATING) {
-            state.updatePeer(peerId, uploaded, downloaded, left);
-        }
-
-        return TrackerResponse.builder()
-                .setInterval(DEFAULT_INTERVAL)
-                .setTrackerId(TRACKER_ID)
-                .setComplete(state.getCompleted())
-                .setIncomplete(state.getInComplete())
-                .setPeers(state.getPeers(peerId))
-                .build();
+        TrackedTorrent trackedTorrent = torrentService.createIfAbsentAndGet(infoHash);
+        Peer peer = new Peer(peerId, request.getRemoteAddr(), port, uploaded, downloaded, left);
+        Event event = eventName != null ? Event.getEvent(eventName) : Event.PERIODIC;
+        trackedTorrent.update(peer, event);
+        return trackedTorrent.getResponseForPeer(peer, TRACKER_ID, DEFAULT_INTERVAL);
     }
 
 }

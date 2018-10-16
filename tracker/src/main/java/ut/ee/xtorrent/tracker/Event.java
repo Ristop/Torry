@@ -5,7 +5,7 @@ public enum Event {
     START,
     STOP,
     COMPLETE,
-    REPEATING;
+    PERIODIC;
 
     public static Event getEvent(String eventName) {
         if ("start".equalsIgnoreCase(eventName)) {
@@ -15,9 +15,8 @@ public enum Event {
         } else if ("complete".equalsIgnoreCase(eventName)) {
             return COMPLETE;
         } else if ("repeating".equalsIgnoreCase(eventName)) {
-            return REPEATING;
+            return PERIODIC;
         }
-
 
         throw new IllegalArgumentException("Unrecognized event: " + eventName);
     }
