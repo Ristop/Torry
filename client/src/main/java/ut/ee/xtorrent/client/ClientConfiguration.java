@@ -1,8 +1,12 @@
 package ut.ee.xtorrent.client;
 
 import be.christophedetroyer.torrent.TorrentParser;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.IOException;
@@ -20,6 +24,23 @@ public class ClientConfiguration {
     public ClientConfiguration() {
         log.info("Client Initialized.");
         readTorrentFiles();
+    }
+
+    public static final String MAIN_CONFIG = "mainConfig";
+    public static final String CLIENT_CONFIG = "clientConfig";
+
+    @Bean(name = MAIN_CONFIG)
+    public Config config() {
+        log.info("Loading configuration.");
+        return ConfigFactory.load();
+    }
+
+    @Bean(name = CLIENT_CONFIG)
+    public Config clientConfig(
+            @Qualifier(MAIN_CONFIG) Config config
+    ) {
+        log.info("Loading client configuration.");
+        return config.getConfig("client");
     }
 
     private void readTorrentFiles() {

@@ -21,7 +21,7 @@ public class SecondClient {
             while (true) {
                 Socket socket = serverSocket.accept();
                 System.out.println("New client connected");
-                new ClientThreadWrite(socket).start();
+//                new ClientThreadWrite(socket).start();
             }
         } catch (IOException e) {
             e.printStackTrace();

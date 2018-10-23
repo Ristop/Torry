@@ -2,12 +2,12 @@ package ut.ee.xtorrent.client;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.Banner;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import javax.annotation.PreDestroy;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -19,20 +19,20 @@ public class ClientApplication {
     protected ClientApplication() {
     }
 
-    public static void main(String[] args) throws IOException {
-//        SpringApplication app = new SpringApplication(ClientApplication.class);
-//        app.setBannerMode(Banner.Mode.LOG);
-//        app.run(args);
+    public static void main(String[] args) {
+        SpringApplication app = new SpringApplication(ClientApplication.class);
+        app.setBannerMode(Banner.Mode.LOG);
+        app.run(args);
 
-        int peerServerPort = Integer.parseInt(args[0]);
-        int otherClientPort = Integer.parseInt(args[1]);
-        String hasFile, needsFile;
-        hasFile = args[2];
-      //  String pathToNeededFile = args[3];
-
-        new ClientThreadRead(otherClientPort).start();
-        //startClient("localhost",6869);
-        startServerSocket(peerServerPort, hasFile);
+//        int peerServerPort = Integer.parseInt(args[0]);
+//        int otherClientPort = Integer.parseInt(args[1]);
+//        String hasFile, needsFile;
+//        hasFile = args[2];
+//      //  String pathToNeededFile = args[3];
+//
+//        new ClientThreadRead(otherClientPort).start();
+//        //startClient("localhost",6869);
+//        startServerSocket(peerServerPort, hasFile);
     }
 
     @PreDestroy
