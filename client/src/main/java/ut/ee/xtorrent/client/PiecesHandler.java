@@ -24,9 +24,6 @@ public class PiecesHandler {
         this.torrent = torrent;
         this.clientPath = clientPath;
         this.existingPieces = findExistingPieces();
-        log.error("Client path received from conf should be wrong");
-            //this.existingPieces = new ArrayList<>();
-
     }
 
     private List<Integer> findExistingPieces() {
@@ -71,6 +68,10 @@ public class PiecesHandler {
                 pieces.add(piece.getId());
         }
         return pieces;
+    }
+
+    public List<Integer> getexistingPieces(){
+        return this.existingPieces;
     }
 
     //todo add method where we can access byte[] after knowing the id of the piece
