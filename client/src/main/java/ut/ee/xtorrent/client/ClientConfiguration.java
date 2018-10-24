@@ -19,11 +19,11 @@ import java.util.stream.Stream;
 public class ClientConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(ClientConfiguration.class);
+    private static Config clientConf;
 
     // Client application logic starts from here
     public ClientConfiguration() {
-        log.info("Client Initialized.");
-        readTorrentFiles();
+        log.info("Client Configurations Initialized.");
     }
 
     public static final String MAIN_CONFIG = "mainConfig";
@@ -40,6 +40,7 @@ public class ClientConfiguration {
             @Qualifier(MAIN_CONFIG) Config config
     ) {
         log.info("Loading client configuration.");
+        this.clientConf = config.getConfig("client");
         return config.getConfig("client");
     }
 
