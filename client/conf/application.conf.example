@@ -1,5 +1,6 @@
 client {
   port1 = 6868
   port2 = 6869
-  path = /home/andreas/kool/hajussusteemid/client1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+  path = /home/andreas/kool/hajussusteemid/client1
+  path2 = /home/andreas/kool/hajussusteemid/client2
 }

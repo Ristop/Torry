@@ -16,14 +16,15 @@ public class TestBean {
         log.info("port2: {} ", clientConf.getInt("port2"));
         log.info("path: {} ", clientConf.getString("path"));
         String path = clientConf.getString("path");
-        new Initializer(path);
+        String path2 = clientConf.getString("path2");
+        new Initializer(path, path2);
 
     }
 
 
     private class Initializer{
-        Initializer(String path){
-            new InitializeClient(path);
+        Initializer(String path, String path2){
+            new InitializeClient(path, path2);
         }
     }
 }

@@ -2,13 +2,9 @@ package ut.ee.xtorrent.client;
 
 import be.christophedetroyer.bencoding.Utils;
 import be.christophedetroyer.torrent.Torrent;
-import com.sun.deploy.util.ArrayUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.util.Arrays;
@@ -51,22 +47,36 @@ public class Piece {
 
     public void writeBytes(String clientPath) {                                   //todo multiple torrent file case
         if (torrent.isSingleFileTorrent())
-            writeBytesToFile(clientPath + "/" + this.torrent.getName());
+            try {
+                writeBytesToFile(clientPath + "/" + this.torrent.getName());
+            } catch (IOException e) {
+                createFile(clientPath + "/" + this.torrent.getName());
+                try {
+                    writeBytesToFile(clientPath + "/" + this.torrent.getName());
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
     }
 
-    private void writeBytesToFile(String filePath) {
-        File file = new File(filePath);
+    private void createFile(String path) {
         try {
-            byte[] fileContent = Files.readAllBytes(file.toPath());
-            System.out.println(fileContent.length);
-            byte[] newContent = changeByteArray(fileContent);
-            System.out.println(newContent.length);
-
+            File file = new File(path);
+            byte[] defaultContent = new byte[torrent.getTotalSize().intValue()];
             OutputStream os = new FileOutputStream(file);
-            os.write(newContent);
+            os.write(defaultContent);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void writeBytesToFile(String filePath) throws IOException{
+        File file = new File(filePath);
+        byte[] fileContent = Files.readAllBytes(file.toPath());
+        byte[] newContent = changeByteArray(fileContent);
+
+        OutputStream os = new FileOutputStream(file);
+        os.write(newContent);
     }
 
     private byte[] changeByteArray(byte[] fileContent) {
@@ -74,7 +84,7 @@ public class Piece {
         int pieceEndingIndex = pieceBeginningIndex + this.torrent.getPieceLength().intValue();
 
         byte[] beginBytes = Arrays.copyOfRange(fileContent, 0, pieceBeginningIndex);
-        byte[] endBytes = Arrays.copyOfRange(fileContent, pieceEndingIndex + 1, fileContent.length);
+        byte[] endBytes = Arrays.copyOfRange(fileContent, pieceEndingIndex, fileContent.length);
         byte[] firstHalf = concatenate(beginBytes, this.getBytes());
         return  concatenate(firstHalf, endBytes);
     }
@@ -84,7 +94,6 @@ public class Piece {
         int aLen = a.length;
         int bLen = b.length;
 
-        @SuppressWarnings("unchecked")
         byte[] c = (byte[]) Array.newInstance(a.getClass().getComponentType(), aLen + bLen);
         System.arraycopy(a, 0, c, 0, aLen);
         System.arraycopy(b, 0, c, aLen, bLen);

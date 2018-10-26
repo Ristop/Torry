@@ -5,13 +5,11 @@ import be.christophedetroyer.torrent.TorrentParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -22,11 +20,11 @@ public class InitializeClient {
     // It's initialized from TestBean.java class. Couldn't find any better solutions. Possible to pass all the config parameters from there
     // The path here is location where are client torrent files located (client is downloading and uploading those torrents).
     // The client is uploading those files in case where the torrent files are already perfectly in this folder, otherwise it will start to download them to that folder
-    InitializeClient(String clientFolderPath){
+    InitializeClient(String clientFolderPath, String client2Folderpath){
         log.info("Client Initialized.");
         List<Torrent> torrentFiles = readTorrentFiles(clientFolderPath);
         for (Torrent torrentFile: torrentFiles){
-            new TorrentHandler(torrentFile, clientFolderPath);
+            new TorrentHandler(torrentFile, clientFolderPath, client2Folderpath);
         }
     }
 

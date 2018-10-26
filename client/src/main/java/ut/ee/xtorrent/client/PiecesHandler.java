@@ -64,6 +64,10 @@ public class PiecesHandler {
     public void writePiece(int id, byte[] bytes) {
         Piece piece = new Piece(id, this.torrent, bytes);
         piece.writeBytes(this.clientPath);
+        if (piece.isCorrect()) {
+            this.notExistingPieces.remove(new Integer(id));
+            this.existingPieces.add(id);
+        }
     }
 
 
@@ -166,8 +170,6 @@ public class PiecesHandler {
                 byte[] fileContent = Files.readAllBytes(file.toPath());
                 byte[] currentPieceBytes = Arrays.copyOfRange(fileContent, this.torrent.getPieceLength().intValue()* id,
                         (this.torrent.getPieceLength().intValue() * (id + 1)));
-                System.out.println(currentPieceBytes.length);
-                System.out.println(torrent.getPieceLength());
                 Piece piece = new Piece(id, this.torrent, currentPieceBytes);
                 if (piece.isCorrect())
                     return piece;
@@ -179,5 +181,6 @@ public class PiecesHandler {
                 return null;
             }
         }
+
     }
 }
