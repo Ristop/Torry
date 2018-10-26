@@ -25,7 +25,7 @@ public class TorrentHandler {
         log.info("Pieces that this client have: " + this.piecesHandler.getExistingPieces().toString());
         log.info("Pieces that this client do not have: " + this.piecesHandler.getNotExistingPieces().toString());
 
-        testWritingBytes(clien2Path);
+        //testWritingBytes(clien2Path);
     }
 
     // todo remove it later
@@ -33,7 +33,7 @@ public class TorrentHandler {
         PiecesHandler piecesHandler2 = new PiecesHandler(torrent, client2);
         log.info("Pieces that client2 have: " + piecesHandler2.getExistingPieces().toString());
         log.info("Pieces that client2 do not have: " + piecesHandler2.getNotExistingPieces().toString());
-    /*                // code for spending file
+    /*                // code for sending file
         while (piecesHandler2.getNotExistingPieces().size() != 0) {
             int randomPieceID = getRandomPieceID(piecesHandler2.getNotExistingPieces());
             if (randomPieceID != -1) {

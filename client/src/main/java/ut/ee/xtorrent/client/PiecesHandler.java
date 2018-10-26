@@ -33,8 +33,6 @@ public class PiecesHandler {
         List<List<Integer>> existences = helper.getPiecesExistence();
         this.existingPieces = existences.get(0);
         this.notExistingPieces = existences.get(1);
-        //if (torrent.isSingleFileTorrent())
-            //writePiece(1, getPieceBytes(1));                                  //remove it
     }
 
     public List<Integer> getExistingPieces(){
@@ -148,16 +146,15 @@ public class PiecesHandler {
 
         private int findPiecesCount() {
             if (this.piecesCount == 0) {
-                long pieceSize = this.torrent.getPieceLength();
+                double pieceSize = this.torrent.getPieceLength();
                 if (this.torrent.isSingleFileTorrent()) {
-                    return (int) (this.torrent.getTotalSize() / pieceSize);
-                } else {                                                          // todo It's wrong, fix when you start to deal with  multiple files pieces
-                    int piecesCount = 0;
+                    return (int) (Math.ceil((this.torrent.getTotalSize().doubleValue() / pieceSize)));
+                } else {
+                    double totalSize = 0;
                     for (TorrentFile file : this.torrent.getFileList()) {
-                        int filePieceCount = (int) Math.ceil(file.getFileLength().doubleValue() / pieceSize);
-                        piecesCount = piecesCount + filePieceCount;
+                        totalSize = totalSize + file.getFileLength().intValue();
                     }
-                    return piecesCount;
+                    return (int) Math.ceil(totalSize / this.torrent.getPieceLength().doubleValue());
                 }
             } else {
                 return this.piecesCount;
