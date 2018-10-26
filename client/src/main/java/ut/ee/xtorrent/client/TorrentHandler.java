@@ -20,7 +20,8 @@ public class TorrentHandler {
         this.torrent = torrent;
         this.clientPath = clientPath;
         this.piecesHandler = new PiecesHandler(torrent, clientPath);
-        log.info("Pieces that this client have: " + this.piecesHandler.getexistingPieces().toString());
+        log.info("Pieces that this client have: " + this.piecesHandler.getExistingPieces().toString());
+        log.info("Pieces that this client do not have: " + this.piecesHandler.getNotExistingPieces().toString());
     }
 
 
