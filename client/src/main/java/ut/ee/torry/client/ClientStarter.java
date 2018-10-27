@@ -51,12 +51,12 @@ public class ClientStarter {
     }
 
     @PostConstruct
-    private void start() throws InterruptedException, ExecutionException {
+    private void start() throws InterruptedException, ExecutionException, IOException {
         log.info("Starting client with peer id {}, running on port {}.", peerId, port);
         downloadTorrents();
     }
 
-    private void downloadTorrents() throws InterruptedException, ExecutionException {
+    private void downloadTorrents() throws InterruptedException, ExecutionException, IOException {
         CompletionService<DownloadTorrentTask> completionService = new ExecutorCompletionService<>(executorService);
 
         for (Torrent torrent : torrents) {
