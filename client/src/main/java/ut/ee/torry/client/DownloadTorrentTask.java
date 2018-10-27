@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 
 public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
@@ -25,16 +26,17 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
     }
 
     @Override
-    public DownloadTorrentTask call() throws Exception {
+    public DownloadTorrentTask call() {
         log.info("Starting downloading torrent: {}", torrent.getName());
         log.info("Existing pieces: {}", piecesHandler.getExistingPieces());
         log.info("Not existing pieces: {}", piecesHandler.getNotExistingPieces());
+        log.info("Torrent pieces count: {}", torrent.getPieces().size());
         return this;
     }
 
     @Override
     public String toString() {
-        return torrent.getName() + " -> " + downloadDir;
+        return torrent.getName() + " -> " + Paths.get(downloadDir, torrent.getName());
     }
 
 }

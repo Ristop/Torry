@@ -17,18 +17,14 @@ public class Piece {
 
     private final int id;
     private final byte[] bytes;
-    private final boolean valid;
     private final Torrent torrent;
+    private final String hash;
 
     public Piece(int id, Torrent torrent, byte[] bytes) {
         this.id = id;
         this.bytes = bytes;
         this.torrent = torrent;
-        this.valid = verifyCorrectness();
-    }
-
-    private boolean verifyCorrectness() {
-        return true;
+        this.hash = torrent.getPieces().get(id);
     }
 
     public int getId() {
@@ -39,14 +35,9 @@ public class Piece {
         return bytes;
     }
 
-    public String getHash() {
-        return torrent.getPieces().get(id);
-    }
-
     public boolean isValid() {
-        byte[] digbyte = DigestUtils.sha(this.bytes);
-        String sha1 = Utils.bytesToHex(digbyte);
-        return getHash().equals(sha1);
+        String calculatedHash = Utils.bytesToHex(DigestUtils.sha(this.bytes));
+        return hash.equals(calculatedHash);
     }
 
     public void writeBytes(String clientPath) throws IOException {

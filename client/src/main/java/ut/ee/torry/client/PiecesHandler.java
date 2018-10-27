@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Objects;
@@ -31,7 +33,7 @@ public class PiecesHandler {
         this.torrent = Objects.requireNonNull(torrent);
         this.downloadFileDir = Objects.requireNonNull(downloadFileDirPath);
         this.pieceSize = torrent.getPieceLength().intValue();
-        this.piecesCount = findPiecesCount();
+        this.piecesCount = torrent.getPieces().size();
         this.existingPieces = findAvailablePieceIndexes();
         this.notExistingPieces = findNotAvailablePieceIndexes(existingPieces);
     }
@@ -88,7 +90,7 @@ public class PiecesHandler {
             byte[] dirTotalBytes = getDictionaryBytes(fullPath);
             return findAvailablePieceIndexes(dirTotalBytes);
         } else if (downloadedTorrent.isFile()) {
-            byte[] fileBytes = getFileBytes(downloadedTorrent);
+            byte[] fileBytes = getFileBytes(downloadedTorrent.toPath());
             return findAvailablePieceIndexes(fileBytes);
         } else {
             return new HashSet<>();
@@ -98,84 +100,65 @@ public class PiecesHandler {
     private Set<Integer> findAvailablePieceIndexes(byte[] totalBytes) {
         Set<Integer> existing = new HashSet<>();
 
-        byte[] currentPieceBytes;
-        for (int pieceIndex = 0; pieceIndex < this.piecesCount; pieceIndex++) {
-            if ((pieceSize * (pieceIndex + 1)) <= totalBytes.length) { // last piece might not be exactly as long as other pieces
-                currentPieceBytes = Arrays.copyOfRange(
-                        totalBytes,
-                        pieceSize * pieceIndex,
-                        (pieceSize * (pieceIndex + 1))
-                );
+        for (int i = 0; i < piecesCount; i++) {
+            int fromBytes = this.pieceSize * i;
+
+            int toBytes;
+            if (piecesCount - 1 == i) { // If it's the last piece
+                toBytes = totalBytes.length;
             } else {
-                currentPieceBytes = Arrays.copyOfRange(
-                        totalBytes,
-                        pieceSize * pieceIndex,
-                        totalBytes.length
-                );
+                toBytes = this.pieceSize * (i + 1);
             }
 
-            Piece piece = new Piece(pieceIndex, this.torrent, currentPieceBytes);
+            byte[] pieceBytes = Arrays.copyOfRange(totalBytes, fromBytes, toBytes);
+
+            Piece piece = new Piece(i, this.torrent, pieceBytes);
             if (piece.isValid()) { // verifying if the bytes really correspond to torrent file metadata
                 existing.add(piece.getId());
             }
         }
+
         return existing;
     }
 
-    private byte[] getDictionaryBytes(String dirPath) {
-        byte[] totalBytes = null;
+    private byte[] getDictionaryBytes(String dirPath) throws IOException {
+        byte[] bytes = new byte[0];
+
         for (TorrentFile torrentFile : torrent.getFileList()) {
-            String fileLoc = String.join(File.separator, torrentFile.getFileDirs());
-            File file = new File(dirPath + File.separator + fileLoc);
-            try {
-                byte[] fileContent = Files.readAllBytes(file.toPath());
-                if (totalBytes == null) {
-                    totalBytes = fileContent;
-                } else {
-                    totalBytes = ArrayUtils.addAll(totalBytes, fileContent);
-                }
-            } catch (IOException e) { // that file does not exist
-                byte[] fileContent = new byte[torrentFile.getFileLength().intValue()];
-                if (totalBytes == null) {
-                    totalBytes = fileContent;
-                } else {
-                    totalBytes = ArrayUtils.addAll(totalBytes, fileContent);
-                }
-            }
-        }
-        return totalBytes;
-    }
+            Path path = Paths.get(dirPath, torrentFile.getFileDirs().toArray(new String[0]));
 
-    private byte[] getFileBytes(File file) throws IOException {
-        return Files.readAllBytes(file.toPath());
-    }
-
-    private int findPiecesCount() {
-        if (this.piecesCount == 0) {
-            double pieceSize = this.torrent.getPieceLength();
-            if (this.torrent.isSingleFileTorrent()) {
-                return (int) (Math.ceil((this.torrent.getTotalSize().doubleValue() / pieceSize)));
+            if (Files.exists(path)) {
+                byte[] fileContent = Files.readAllBytes(path);
+                bytes = ArrayUtils.addAll(bytes, fileContent);
             } else {
-                double totalSize = 0;
-                for (TorrentFile file : this.torrent.getFileList()) {
-                    totalSize = totalSize + file.getFileLength().intValue();
-                }
-                return (int) Math.ceil(totalSize / this.torrent.getPieceLength().doubleValue());
+                // TODO : what if file length is Long?
+                byte[] emptyBytes = new byte[torrentFile.getFileLength().intValue()];
+                bytes = ArrayUtils.addAll(bytes, emptyBytes);
             }
-        } else {
-            return this.piecesCount;
         }
+        return bytes;
+    }
+
+    private byte[] getFileBytes(Path path) throws IOException {
+        return Files.readAllBytes(path);
     }
 
     private Piece getPieceByIdForSingleFile(int id) throws IOException {
-        File file = new File(this.downloadFileDir + File.separator + this.torrent.getName());
-        byte[] fileContent = Files.readAllBytes(file.toPath());
-        byte[] currentPieceBytes = Arrays.copyOfRange(
-                fileContent,
-                this.torrent.getPieceLength().intValue() * id,
-                this.torrent.getPieceLength().intValue() * (id + 1)
-        );
+        byte[] fileContent = Files.readAllBytes(Paths.get(this.downloadFileDir, torrent.getName()));
+
+        int fromBytes = this.pieceSize * id;
+
+        int toBytes;
+        if (piecesCount - 1 == id) { // If it's the last piece
+            toBytes = fileContent.length;
+        } else {
+            toBytes = this.pieceSize * (id + 1);
+        }
+
+        byte[] currentPieceBytes = Arrays.copyOfRange(fileContent, fromBytes, toBytes);
+
         Piece piece = new Piece(id, this.torrent, currentPieceBytes);
+
         if (piece.isValid()) {
             return piece;
         } else {
