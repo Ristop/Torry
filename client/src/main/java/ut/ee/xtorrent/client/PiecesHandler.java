@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class PiecesHandler {
+public class PiecesHandler extends ConcatinationHelper{
 
     private static final Logger log = LoggerFactory.getLogger(PiecesHandler.class);
     private final Torrent torrent;
@@ -85,16 +85,17 @@ public class PiecesHandler {
         }
 
         private List<List<Integer>> getPiecesExistence() {
-            File torrentDirOrFile = new File(this.clientPath + "/" + this.torrent.getName());
+            String dirOrFileLoc = this.clientPath + "/" + this.torrent.getName();
+            File torrentDirOrFile = new File(dirOrFileLoc);
             List<Integer> existing = new ArrayList<>();
             List<Integer> notExisting = new ArrayList<>();
-            if (torrentDirOrFile.isDirectory()){
-                return findPiecesExistanceFromDirectory();
+            if (torrentDirOrFile.isDirectory()){                                       // floder case
+                return getPiecesExistenceFromDirectory(dirOrFileLoc);
             }
-            else if (torrentDirOrFile.isFile()) {                                       // single file case
-                return addPiecesExistanceFromFile(torrentDirOrFile, existing, notExisting, 0);
+            else if (torrentDirOrFile.isFile()) {                                      // single file case
+                return getPiecesExistenceFromFile(torrentDirOrFile);
             }
-            else                                                    // this file/folder doesn't exist
+            else                                                                    // this file/folder doesn't exist
                 return allPiecesMissing(existing, notExisting);
         }
 
@@ -105,36 +106,74 @@ public class PiecesHandler {
             return listOfLists(existing, notExisting);
         }
 
-        private List<List<Integer>> findPiecesExistanceFromDirectory() {
-            return listOfLists(new ArrayList<>(), new ArrayList<>());               //todo
-        }
-
-        private List<List<Integer>> addPiecesExistanceFromFile(File file, List<Integer> existing, List<Integer> notExisting, int firstPieceID)  {
-            try{
-                List<List<Integer>> pieces = getPiecesExistanceFromFile(file, firstPieceID);
-                existing.addAll(pieces.get(0));
-                notExisting.addAll(pieces.get(1));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return listOfLists(existing, notExisting);
-        }
-
-        private List<List<Integer>> getPiecesExistanceFromFile(File file, int firstPieceID) throws IOException{
+        private List<List<Integer>> getPiecesExistenceFromDirectory(String dirLoc) {
+            byte[] dirTotalBytes = getDictionaryBytes(dirLoc);
+            int pieceSize = this.torrent.getPieceLength().intValue();
             List<Integer> existing = new ArrayList<>();
             List<Integer> notExisting = new ArrayList<>();
-            int pieceSize = torrent.getPieceLength().intValue();
-            byte[] fileContent = Files.readAllBytes(file.toPath());
 
+            return getPiecesExistanceFromBytes(dirTotalBytes, pieceSize, existing, notExisting);
+        }
+
+        private List<List<Integer>> getPiecesExistenceFromFile(File file) {
+            byte[] fileBytes = getFileBytes(file);
+            int pieceSize = this.torrent.getPieceLength().intValue();
+            List<Integer> existing = new ArrayList<>();
+            List<Integer> notExisting = new ArrayList<>();
+
+            return getPiecesExistanceFromBytes(fileBytes, pieceSize, existing, notExisting);
+        }
+
+
+        private List<List<Integer>> getPiecesExistanceFromBytes(byte[] totalBytes, int pieceSize, List<Integer> existing, List<Integer> notExisting) {
+            byte[] currentPieceBytes;
             for (int pieceID = 0; pieceID < this.piecesCount; pieceID++) {
-                byte[] currentPieceBytes = Arrays.copyOfRange(fileContent, pieceSize * pieceID, (pieceSize * (pieceID + 1)));
-                Piece piece = new Piece(pieceID + firstPieceID, this.torrent, currentPieceBytes);
-                if (piece.isCorrect())                   // verifying if the bytes really correspond to torrent file metadata
+                if ((pieceSize * (pieceID + 1)) > totalBytes.length)                               // last piece might not be exactly as long as other pieces
+                    currentPieceBytes = Arrays.copyOfRange(totalBytes, pieceSize * pieceID, totalBytes.length);
+                else
+                    currentPieceBytes = Arrays.copyOfRange(totalBytes, pieceSize * pieceID, (pieceSize * (pieceID + 1)));
+
+                Piece piece = new Piece(pieceID, this.torrent, currentPieceBytes);
+                if (piece.isCorrect())                                                        // verifying if the bytes really correspond to torrent file metadata
                     existing.add(piece.getId());
                 else
                     notExisting.add(piece.getId());
             }
             return listOfLists(existing, notExisting);
+        }
+
+
+        private byte[] getDictionaryBytes(String dirLoc) {
+            byte[] totalBytes = null;
+            for (TorrentFile torrentFile :torrent.getFileList()) {
+                String fileLoc = String.join("/", torrentFile.getFileDirs());
+                File file = new File(dirLoc + "/" + fileLoc);
+                try {
+                    byte[] fileContent = Files.readAllBytes(file.toPath());
+                    if (totalBytes == null) {
+                        totalBytes = fileContent;
+                    } else {
+                        totalBytes = concatenate(totalBytes, fileContent);
+                    }
+                } catch ( IOException e) {                                  // that file does not exist
+                    byte[] fileContent = new byte[torrentFile.getFileLength().intValue()];
+                    if (totalBytes == null) {
+                        totalBytes = fileContent;
+                    } else {
+                        totalBytes = concatenate(totalBytes, fileContent);
+                    }
+                }
+            }
+            return totalBytes;
+        }
+
+        private byte[] getFileBytes(File file) {
+            try {
+                return Files.readAllBytes(file.toPath());
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
         }
 
         private List<List<Integer>> listOfLists(List<Integer> list1, List<Integer> list2){
@@ -178,6 +217,5 @@ public class PiecesHandler {
                 return null;
             }
         }
-
     }
 }
