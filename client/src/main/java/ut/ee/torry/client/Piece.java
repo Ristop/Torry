@@ -3,13 +3,16 @@ package ut.ee.torry.client;
 import be.christophedetroyer.bencoding.Utils;
 import be.christophedetroyer.torrent.Torrent;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.ArrayUtils;
 
-import java.io.*;
-import java.lang.reflect.Array;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.Arrays;
 
-public class Piece extends ConcatinationHelper{
+public class Piece {
 
     private final int id;
     private final byte[] bytes;
@@ -45,8 +48,8 @@ public class Piece extends ConcatinationHelper{
         return getHash().equals(sha1);
     }
 
-    public void writeBytes(String clientPath) {                                   //todo multiple torrent file case
-        if (torrent.isSingleFileTorrent())
+    public void writeBytes(String clientPath) { // TODO: multiple torrent file case
+        if (torrent.isSingleFileTorrent()) {
             try {
                 writeBytesToFile(clientPath + "/" + this.torrent.getName());
             } catch (IOException e) {
@@ -57,6 +60,7 @@ public class Piece extends ConcatinationHelper{
                     ex.printStackTrace();
                 }
             }
+        }
     }
 
     private void createFile(String path) {
@@ -70,7 +74,7 @@ public class Piece extends ConcatinationHelper{
         }
     }
 
-    private void writeBytesToFile(String filePath) throws IOException{
+    private void writeBytesToFile(String filePath) throws IOException {
         File file = new File(filePath);
         byte[] fileContent = Files.readAllBytes(file.toPath());
         byte[] newContent = changeByteArray(fileContent);
@@ -85,8 +89,8 @@ public class Piece extends ConcatinationHelper{
 
         byte[] beginBytes = Arrays.copyOfRange(fileContent, 0, pieceBeginningIndex);
         byte[] endBytes = Arrays.copyOfRange(fileContent, pieceEndingIndex, fileContent.length);
-        byte[] firstHalf = concatenate(beginBytes, this.getBytes());
-        return  concatenate(firstHalf, endBytes);
+        byte[] firstHalf = ArrayUtils.addAll(beginBytes, this.getBytes());
+        return ArrayUtils.addAll(firstHalf, endBytes);
     }
 
 }

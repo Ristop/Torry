@@ -1,7 +1,8 @@
-package ut.ee.xtorrent.client;
+package ut.ee.torry.client;
 
 import be.christophedetroyer.torrent.Torrent;
 import be.christophedetroyer.torrent.TorrentFile;
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,9 +13,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class PiecesHandler extends ConcatinationHelper{
+public class PiecesHandler {
 
     private static final Logger log = LoggerFactory.getLogger(PiecesHandler.class);
+
     private final Torrent torrent;
     private final String clientPath;
     private final int piecesCount;
@@ -24,7 +26,7 @@ public class PiecesHandler extends ConcatinationHelper{
     private List<Integer> notExistingPieces;
 
 
-    PiecesHandler(Torrent torrent, String clientPath){
+    PiecesHandler(Torrent torrent, String clientPath) {
         this.torrent = torrent;
         this.clientPath = clientPath;
 
@@ -35,15 +37,15 @@ public class PiecesHandler extends ConcatinationHelper{
         this.notExistingPieces = existences.get(1);
     }
 
-    public List<Integer> getExistingPieces(){
+    public List<Integer> getExistingPieces() {
         return this.existingPieces;
     }
 
-    public int getPiecesCount(){
+    public int getPiecesCount() {
         return this.piecesCount;
     }
 
-    public List<Integer> getNotExistingPieces(){
+    public List<Integer> getNotExistingPieces() {
         return this.notExistingPieces;
     }
 
@@ -63,12 +65,10 @@ public class PiecesHandler extends ConcatinationHelper{
         Piece piece = new Piece(id, this.torrent, bytes);
         piece.writeBytes(this.clientPath);
         if (piece.isCorrect()) {
-            this.notExistingPieces.remove(new Integer(id));
+            this.notExistingPieces.remove(id);
             this.existingPieces.add(id);
         }
     }
-
-
 
 
     private class Helper {
@@ -78,7 +78,7 @@ public class PiecesHandler extends ConcatinationHelper{
         private final String clientPath;
         private final int piecesCount;
 
-        Helper(Torrent torrent, String clientPath){
+        Helper(Torrent torrent, String clientPath) {
             this.torrent = torrent;
             this.clientPath = clientPath;
             this.piecesCount = findPiecesCount();
@@ -89,18 +89,17 @@ public class PiecesHandler extends ConcatinationHelper{
             File torrentDirOrFile = new File(dirOrFileLoc);
             List<Integer> existing = new ArrayList<>();
             List<Integer> notExisting = new ArrayList<>();
-            if (torrentDirOrFile.isDirectory()){                                       // floder case
+            if (torrentDirOrFile.isDirectory()) { // floder case
                 return getPiecesExistenceFromDirectory(dirOrFileLoc);
-            }
-            else if (torrentDirOrFile.isFile()) {                                      // single file case
+            } else if (torrentDirOrFile.isFile()) { // single file case
                 return getPiecesExistenceFromFile(torrentDirOrFile);
-            }
-            else                                                                    // this file/folder doesn't exist
+            } else { // this file/folder doesn't exist
                 return allPiecesMissing(existing, notExisting);
+            }
         }
 
         private List<List<Integer>> allPiecesMissing(List<Integer> existing, List<Integer> notExisting) {
-            for (int i = 0; i<this.piecesCount; i++) {
+            for (int i = 0; i < this.piecesCount; i++) {
                 notExisting.add(i);
             }
             return listOfLists(existing, notExisting);
@@ -125,19 +124,23 @@ public class PiecesHandler extends ConcatinationHelper{
         }
 
 
-        private List<List<Integer>> getPiecesExistanceFromBytes(byte[] totalBytes, int pieceSize, List<Integer> existing, List<Integer> notExisting) {
+        private List<List<Integer>> getPiecesExistanceFromBytes(
+                byte[] totalBytes, int pieceSize, List<Integer> existing, List<Integer> notExisting
+        ) {
             byte[] currentPieceBytes;
             for (int pieceID = 0; pieceID < this.piecesCount; pieceID++) {
-                if ((pieceSize * (pieceID + 1)) > totalBytes.length)                               // last piece might not be exactly as long as other pieces
-                    currentPieceBytes = Arrays.copyOfRange(totalBytes, pieceSize * pieceID, totalBytes.length);
-                else
+                if ((pieceSize * (pieceID + 1)) <= totalBytes.length) { // last piece might not be exactly as long as other pieces
                     currentPieceBytes = Arrays.copyOfRange(totalBytes, pieceSize * pieceID, (pieceSize * (pieceID + 1)));
+                } else {
+                    currentPieceBytes = Arrays.copyOfRange(totalBytes, pieceSize * pieceID, totalBytes.length);
+                }
 
                 Piece piece = new Piece(pieceID, this.torrent, currentPieceBytes);
-                if (piece.isCorrect())                                                        // verifying if the bytes really correspond to torrent file metadata
+                if (piece.isCorrect()) { // verifying if the bytes really correspond to torrent file metadata
                     existing.add(piece.getId());
-                else
+                } else {
                     notExisting.add(piece.getId());
+                }
             }
             return listOfLists(existing, notExisting);
         }
@@ -145,7 +148,7 @@ public class PiecesHandler extends ConcatinationHelper{
 
         private byte[] getDictionaryBytes(String dirLoc) {
             byte[] totalBytes = null;
-            for (TorrentFile torrentFile :torrent.getFileList()) {
+            for (TorrentFile torrentFile : torrent.getFileList()) {
                 String fileLoc = String.join("/", torrentFile.getFileDirs());
                 File file = new File(dirLoc + "/" + fileLoc);
                 try {
@@ -153,14 +156,14 @@ public class PiecesHandler extends ConcatinationHelper{
                     if (totalBytes == null) {
                         totalBytes = fileContent;
                     } else {
-                        totalBytes = concatenate(totalBytes, fileContent);
+                        totalBytes = ArrayUtils.addAll(totalBytes, fileContent);
                     }
-                } catch ( IOException e) {                                  // that file does not exist
+                } catch (IOException e) {                                  // that file does not exist
                     byte[] fileContent = new byte[torrentFile.getFileLength().intValue()];
                     if (totalBytes == null) {
                         totalBytes = fileContent;
                     } else {
-                        totalBytes = concatenate(totalBytes, fileContent);
+                        totalBytes = ArrayUtils.addAll(totalBytes, fileContent);
                     }
                 }
             }
@@ -176,7 +179,7 @@ public class PiecesHandler extends ConcatinationHelper{
             }
         }
 
-        private List<List<Integer>> listOfLists(List<Integer> list1, List<Integer> list2){
+        private List<List<Integer>> listOfLists(List<Integer> list1, List<Integer> list2) {
             List<List<Integer>> res = new ArrayList<>();
             res.add(list1);
             res.add(list2);
@@ -202,17 +205,17 @@ public class PiecesHandler extends ConcatinationHelper{
 
         private Piece getSingleFilePiece(int id) {
             File file = new File(this.clientPath + "/" + this.torrent.getName());
-            try{
+            try {
                 byte[] fileContent = Files.readAllBytes(file.toPath());
-                byte[] currentPieceBytes = Arrays.copyOfRange(fileContent, this.torrent.getPieceLength().intValue()* id,
+                byte[] currentPieceBytes = Arrays.copyOfRange(fileContent, this.torrent.getPieceLength().intValue() * id,
                         (this.torrent.getPieceLength().intValue() * (id + 1)));
                 Piece piece = new Piece(id, this.torrent, currentPieceBytes);
-                if (piece.isCorrect())
+                if (piece.isCorrect()) {
                     return piece;
-                else {
+                } else {
                     throw new RuntimeException("Piece is either not downloaded or there's a mistake in the code");
                 }
-            } catch (IOException e){
+            } catch (IOException e) {
                 e.printStackTrace();
                 return null;
             }

@@ -26,7 +26,7 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
     @Override
     public DownloadTorrentTask call() throws Exception {
         log.info("Starting downloading torrent: {}", torrent.getName());
-        log.info("Existing pieces: {}", piecesHandler.getexistingPieces());
+        log.info("Existing pieces: {}", piecesHandler.getExistingPieces());
         return this;
     }
 
