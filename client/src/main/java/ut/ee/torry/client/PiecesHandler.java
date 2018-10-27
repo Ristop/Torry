@@ -61,7 +61,7 @@ public class PiecesHandler {
         return getPiece(id).getBytes();
     }
 
-    public void writePiece(int id, byte[] bytes) {
+    public void writePiece(int id, byte[] bytes) throws IOException {
         Piece piece = new Piece(id, this.torrent, bytes);
         piece.writeBytes(this.downloadFileDir);
         if (piece.isValid()) {
@@ -73,7 +73,7 @@ public class PiecesHandler {
     private Set<Integer> findNotAvailablePieceIndexes(Set<Integer> existingPieces) {
         Set<Integer> notExistingPieces = new HashSet<>();
         for (int i = 0; i < this.piecesCount; i++) {
-            if (existingPieces.contains(i)) {
+            if (!existingPieces.contains(i)) {
                 notExistingPieces.add(i);
             }
         }

@@ -49,17 +49,13 @@ public class Piece {
         return getHash().equals(sha1);
     }
 
-    public void writeBytes(String clientPath) {
+    public void writeBytes(String clientPath) throws IOException {
         if (torrent.isSingleFileTorrent()) {
             try {
                 writeBytesToFile(clientPath + File.separator + this.torrent.getName());
             } catch (IOException e) {
                 createFile(clientPath + File.separator + this.torrent.getName());
-                try {
-                    writeBytesToFile(clientPath + File.separator + this.torrent.getName());
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                }
+                writeBytesToFile(clientPath + File.separator + this.torrent.getName());
             }
         } else {
             // TODO: multiple torrent file case
@@ -67,14 +63,11 @@ public class Piece {
         }
     }
 
-    private void createFile(String path) {
-        try {
-            File file = new File(path);
-            byte[] defaultContent = new byte[torrent.getTotalSize().intValue()];
-            OutputStream os = new FileOutputStream(file);
+    private void createFile(String path) throws IOException {
+        File file = new File(path);
+        byte[] defaultContent = new byte[torrent.getTotalSize().intValue()];
+        try (OutputStream os = new FileOutputStream(file)) {
             os.write(defaultContent);
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
@@ -83,8 +76,9 @@ public class Piece {
         byte[] fileContent = Files.readAllBytes(file.toPath());
         byte[] newContent = changeByteArray(fileContent);
 
-        OutputStream os = new FileOutputStream(file);
-        os.write(newContent);
+        try (OutputStream os = new FileOutputStream(file)) {
+            os.write(newContent);
+        }
     }
 
     private byte[] changeByteArray(byte[] fileContent) {
