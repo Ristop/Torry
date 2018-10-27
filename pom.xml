@@ -59,7 +59,7 @@
             <version>${logback.version}</version>
         </dependency>
 
-        <!-- For testing if needed -->
+        <!-- For testing -->
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>

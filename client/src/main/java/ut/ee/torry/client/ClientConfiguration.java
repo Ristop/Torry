@@ -1,6 +1,5 @@
 package ut.ee.torry.client;
 
-import be.christophedetroyer.torrent.TorrentParser;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.slf4j.Logger;
@@ -9,25 +8,17 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.stream.Stream;
-
 @Configuration
 public class ClientConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(ClientConfiguration.class);
-    private static Config clientConf;
 
-    // Client application logic starts from here
-    public ClientConfiguration() {
-        log.info("Client Configurations Initialized.");
-    }
+    private static final String MAIN_CONFIG = "mainConfig";
+    private static final String CLIENT_CONFIG = "clientConfig";
 
-    public static final String MAIN_CONFIG = "mainConfig";
-    public static final String CLIENT_CONFIG = "clientConfig";
+    private static final String PORT = "port";
+    private static final String TORRENT_FILES_DIR = "torrentFilesDir";
+    private static final String DOWNLOADED_FILES_DIR = "downloadedFilesDir";
 
     @Bean(name = MAIN_CONFIG)
     public Config config() {
@@ -40,28 +31,30 @@ public class ClientConfiguration {
             @Qualifier(MAIN_CONFIG) Config config
     ) {
         log.info("Loading client configuration.");
-        this.clientConf = config.getConfig("client");
         return config.getConfig("client");
     }
 
-    private void readTorrentFiles() {
-        log.info("Torrent files testing started");
+    // Actual config value beans start here
 
-        try (Stream<Path> paths = Files.walk(Paths.get("common/src/main/resources/test_torrent_files"))) {
-            paths
-                    .filter(Files::isRegularFile)
-                    .forEach(f -> {
-                        try {
-                            System.out.println(TorrentParser.parseTorrent(f.toString()));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    })
-            ;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    @Bean(PORT)
+    public int port(
+            @Qualifier(CLIENT_CONFIG) Config config
+    ) {
+        return config.getInt(PORT);
+    }
 
+    @Bean(TORRENT_FILES_DIR)
+    public String torrentFilesDir(
+            @Qualifier(CLIENT_CONFIG) Config config
+    ) {
+        return config.getString(TORRENT_FILES_DIR);
+    }
+
+    @Bean(DOWNLOADED_FILES_DIR)
+    public String downloadedFilesDir(
+            @Qualifier(CLIENT_CONFIG) Config config
+    ) {
+        return config.getString(DOWNLOADED_FILES_DIR);
     }
 
 }
