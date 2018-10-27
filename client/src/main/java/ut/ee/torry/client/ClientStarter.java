@@ -6,17 +6,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletionService;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import javax.annotation.PostConstruct;
 
 import static ut.ee.torry.client.ClientConfiguration.DOWNLOADED_FILES_DIR;
 import static ut.ee.torry.client.ClientConfiguration.PEER_ID;

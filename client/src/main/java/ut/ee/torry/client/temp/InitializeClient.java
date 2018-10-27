@@ -17,13 +17,16 @@ public class InitializeClient {
 
     private static final Logger log = LoggerFactory.getLogger(InitializeClient.class);
 
-    // It's initialized from TestBean.java class. Couldn't find any better solutions. Possible to pass all the config parameters from there
-    // The path here is location where are client torrent files located (client is downloading and uploading those torrents).
-    // The client is uploading those files in case where the torrent files are already perfectly in this folder, otherwise it will start to download them to that folder
-    InitializeClient(String clientFolderPath){
+    // It's initialized from TestBean.java class. Couldn't find any better solutions.
+    // Possible to pass all the config parameters from there
+    // The path here is location where are client torrent files located
+    // (client is downloading and uploading those torrents).
+    // The client is uploading those files in case where the torrent files are already
+    // perfectly in this folder, otherwise it will start to download them to that folder
+    InitializeClient(String clientFolderPath) {
         log.info("Client Initialized.");
         List<Torrent> torrentFiles = readTorrentFiles(clientFolderPath);
-        for (Torrent torrentFile: torrentFiles){
+        for (Torrent torrentFile : torrentFiles) {
             new TorrentHandler(torrentFile, clientFolderPath);
         }
     }
@@ -32,8 +35,7 @@ public class InitializeClient {
         ArrayList<Torrent> torrentFiles = new ArrayList<>();
 
         try (Stream<Path> paths = Files.walk(Paths.get(location))) {
-            paths
-                    .filter(Files::isRegularFile)
+            paths.filter(Files::isRegularFile)
                     .forEach(f -> {
                         try {
                             if (f.toString().endsWith(".torrent")) {
@@ -42,15 +44,12 @@ public class InitializeClient {
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-                    })
-            ;
+                    });
         } catch (IOException e) {
             e.printStackTrace();
         }
         return torrentFiles;
     }
-
-
 
 
 }

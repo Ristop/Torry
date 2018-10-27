@@ -32,8 +32,9 @@ public class PiecesHandler {
             return findExistingPiecesFromDirectory();
         } else if (torrentDirOrFile.isFile()) {                                       // single file case
             return findExistingPiecesFromFile(torrentDirOrFile, existingPieces, 0);
-        } else                                                                        // this file/folder doesn't exist //todo check it
+        } else { // this file/folder doesn't exist // todo check it
             return existingPieces;
+        }
     }
 
     private List<Integer> findExistingPiecesFromDirectory() {
@@ -61,8 +62,9 @@ public class PiecesHandler {
         for (int pieceID = 0; pieceID < piecesCount; pieceID++) {
             byte[] currentPieceBytes = Arrays.copyOfRange(fileContent, pieceSize * pieceID, (pieceSize * (pieceID + 1)));
             Piece piece = new Piece(pieceID + currentPeaceID, this.torrent, currentPieceBytes);
-            if (piece.isCorrect())                   // verifying if the bytes really correspond to torrent file metadata
+            if (piece.isCorrect()) { // verifying if the bytes really correspond to torrent file metadata
                 pieces.add(piece.getId());
+            }
         }
         return pieces;
     }

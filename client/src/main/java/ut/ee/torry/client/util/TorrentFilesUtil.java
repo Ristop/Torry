@@ -22,7 +22,7 @@ public final class TorrentFilesUtil {
 
     private static final Logger log = LoggerFactory.getLogger(ClientStarter.class);
 
-    public final static String TORRENT_FILE_EXTENSION = ".torrent";
+    public static final String TORRENT_FILE_EXTENSION = ".torrent";
 
     private TorrentFilesUtil() {
     }
