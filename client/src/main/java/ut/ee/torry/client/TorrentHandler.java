@@ -1,10 +1,8 @@
-package ut.ee.xtorrent.client;
+package ut.ee.torry.client;
 
 import be.christophedetroyer.torrent.Torrent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Arrays;
 
 
 // I'm tinking that this class might be responsible for communicating with tracker and client. (one object for a torrent file)

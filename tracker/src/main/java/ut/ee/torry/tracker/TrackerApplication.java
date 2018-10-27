@@ -1,4 +1,4 @@
-package ut.ee.xtorrent.tracker;
+package ut.ee.torry.tracker;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import javax.annotation.PreDestroy;
 
-@SpringBootApplication(scanBasePackages = {"ut.ee.xtorrent"})
+@SpringBootApplication(scanBasePackages = {"ut.ee.torry"})
 public class TrackerApplication {
 
     private static final Logger log = LoggerFactory.getLogger(TrackerApplication.class);

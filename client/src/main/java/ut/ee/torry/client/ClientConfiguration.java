@@ -1,4 +1,4 @@
-package ut.ee.xtorrent.client;
+package ut.ee.torry.client;
 
 import be.christophedetroyer.torrent.TorrentParser;
 import com.typesafe.config.Config;

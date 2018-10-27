@@ -1,4 +1,4 @@
-package ut.ee.xtorrent.client;
+package ut.ee.torry.client;
 
 import com.typesafe.config.Config;
 import org.slf4j.Logger;

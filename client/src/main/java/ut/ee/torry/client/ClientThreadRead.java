@@ -1,4 +1,4 @@
-package ut.ee.xtorrent.client;
+package ut.ee.torry.client;
 
 import org.apache.commons.io.FileUtils;
 

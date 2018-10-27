@@ -1,4 +1,4 @@
-package ut.ee.xtorrent.tracker;
+package ut.ee.torry.tracker;
 
 public enum Event {
 

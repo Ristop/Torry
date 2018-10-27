@@ -1,4 +1,4 @@
-package ut.ee.xtorrent.client;
+package ut.ee.torry.client;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-@SpringBootApplication(scanBasePackages = {"ut.ee.xtorrent"})
+@SpringBootApplication(scanBasePackages = {"ut.ee.torry"})
 public class ClientApplication {
 
     private static final Logger log = LoggerFactory.getLogger(ClientApplication.class);

@@ -1,4 +1,4 @@
-package ut.ee.xtorrent.tracker;
+package ut.ee.torry.tracker;
 
 import org.springframework.stereotype.Component;
 

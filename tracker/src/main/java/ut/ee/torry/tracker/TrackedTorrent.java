@@ -1,4 +1,4 @@
-package ut.ee.xtorrent.tracker;
+package ut.ee.torry.tracker;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
