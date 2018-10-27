@@ -1,4 +1,4 @@
-package ut.ee.torry.client.temp;
+package ut.ee.torry.client;
 
 import be.christophedetroyer.bencoding.Utils;
 import be.christophedetroyer.torrent.Torrent;

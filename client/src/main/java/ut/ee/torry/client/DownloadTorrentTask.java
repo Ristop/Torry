@@ -12,6 +12,7 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
 
     private final Torrent torrent;
     private final String downloadDir;
+    private final PiecesHandler piecesHandler;
 
     public DownloadTorrentTask(
             Torrent torrent,
@@ -19,11 +20,13 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
     ) {
         this.torrent = torrent;
         this.downloadDir = downloadDir;
+        this.piecesHandler = new PiecesHandler(torrent, downloadDir);
     }
 
     @Override
     public DownloadTorrentTask call() throws Exception {
-        log.info("Starting downloading torrent: ", torrent.getName());
+        log.info("Starting downloading torrent: {}", torrent.getName());
+        log.info("Existing pieces: {}", piecesHandler.getexistingPieces());
         return this;
     }
 
