@@ -33,9 +33,12 @@ public class TrackerController {
      * @param downloaded The total amount downloaded (since the client sent the 'started' event to the tracker) in base ten ASCII.
      * @param left       The number of bytes this client still has to download in base ten ASCII.
      * @param compact    Setting this to 1 indicates that the client accepts a compact response.
-     * @param noPeerId   Indicates that the tracker can omit peer id field in peers dictionary. This option is ignored if compact is enabled.
-     * @param eventName  (Optional) If specified, must be one of started, completed, stopped. If not specified, then this request is one performed at regular intervals.
-     * @param ip         (Optional) The true IP address of the client machine, in dotted quad format or rfc3513 defined hexed IPv6 address.
+     * @param noPeerId   Indicates that the tracker can omit peer id field in peers dictionary.
+     *                   This option is ignored if compact is enabled.
+     * @param eventName  (Optional) If specified, must be one of started, completed, stopped.
+     *                   If not specified, then this request is one performed at regular intervals.
+     * @param ip         (Optional) The true IP address of the client machine,
+     *                   in dotted quad format or rfc3513 defined hexed IPv6 address.
      * @param numwant    (Optional) Number of peers that the client would like to receive from the tracker.
      * @param key        (Optional) An additional identification that is not shared with any other peers.
      * @param trackerId  (Optional) If a previous announce contained a tracker id, it should be set here.

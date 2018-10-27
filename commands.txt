@@ -1,9 +1,0 @@
-demo:
-
-client1:
-cd C:\Users\Egert\Desktop\Distribute_systems\demo\client1
-java -jar client.jar 6869 6868 "C:\Users\Egert\Desktop\Distribute_systems\demo\client1\file1.txt"
-
-client2: 
-cd C:\Users\Egert\Desktop\Distribute_systems\demo\client2
-java -jar client.jar 6868 6869 "C:\Users\Egert\Desktop\Distribute_systems\demo\client2\file2.txt"

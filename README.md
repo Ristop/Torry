@@ -24,4 +24,5 @@ Requires Java 8
 ### Tracker
 * `java -jar tracker/target/xtorrent-tracker-*.jar`
 ### Client
-* `java -jar client/target/xtorrent-client-*.jar`
+* Set up `application.configuration` file. Sample of this file can be found from `client/conf/application.conf.example`.
+* `java -Dconfig.file=/path/to/application.configuration -jar client/target/xtorrent-client-*.jar`

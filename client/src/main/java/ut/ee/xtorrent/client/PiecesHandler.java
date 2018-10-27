@@ -9,18 +9,17 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class PiecesHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(PiecesHandler.class);
+
     private final Torrent torrent;
     private final String clientPath;
-    private static final Logger log = LoggerFactory.getLogger(PiecesHandler.class);
     private final List<Integer> existingPieces;
 
-
-    PiecesHandler(Torrent torrent, String clientPath){
+    PiecesHandler(Torrent torrent, String clientPath) {
         this.torrent = torrent;
         this.clientPath = clientPath;
         this.existingPieces = findExistingPieces();
@@ -29,13 +28,11 @@ public class PiecesHandler {
     private List<Integer> findExistingPieces() {
         List<Integer> existingPieces = new ArrayList<>();
         File torrentDirOrFile = new File(this.clientPath + "/" + this.torrent.getName());
-        if (torrentDirOrFile.isDirectory()){
+        if (torrentDirOrFile.isDirectory()) {
             return findExistingPiecesFromDirectory();
-        }
-        else if (torrentDirOrFile.isFile()) {                                       // single file case
+        } else if (torrentDirOrFile.isFile()) {                                       // single file case
             return findExistingPiecesFromFile(torrentDirOrFile, existingPieces, 0);
-        }
-        else                                                                        // this file/folder doesn't exist //todo check it
+        } else                                                                        // this file/folder doesn't exist //todo check it
             return existingPieces;
     }
 
@@ -43,8 +40,8 @@ public class PiecesHandler {
         return new ArrayList<>();   //todo
     }
 
-    private List<Integer> findExistingPiecesFromFile(File file, List<Integer> existingPieces, int currentPeaceID)  {
-        try{
+    private List<Integer> findExistingPiecesFromFile(File file, List<Integer> existingPieces, int currentPeaceID) {
+        try {
             List<Integer> pieces = getFilePieces(file, currentPeaceID);
             existingPieces.addAll(pieces);
         } catch (IOException e) {
@@ -54,11 +51,11 @@ public class PiecesHandler {
         return existingPieces;
     }
 
-    private List<Integer> getFilePieces(File file, int currentPeaceID) throws IOException{
+    private List<Integer> getFilePieces(File file, int currentPeaceID) throws IOException {
         List<Integer> pieces = new ArrayList<>();
         int pieceSize = torrent.getPieceLength().intValue();
         long fileSize = torrent.getTotalSize();
-        long piecesCount = fileSize/pieceSize;
+        long piecesCount = fileSize / pieceSize;
         byte[] fileContent = Files.readAllBytes(file.toPath());
 
         for (int pieceID = 0; pieceID < piecesCount; pieceID++) {
@@ -70,7 +67,7 @@ public class PiecesHandler {
         return pieces;
     }
 
-    public List<Integer> getexistingPieces(){
+    public List<Integer> getexistingPieces() {
         return this.existingPieces;
     }
 

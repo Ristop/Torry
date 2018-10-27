@@ -3,7 +3,7 @@ package ut.ee.xtorrent.tracker;
 import java.util.Optional;
 import java.util.Set;
 
-public class TrackerResponse {
+public final class TrackerResponse {
 
     private final String failureReason;
     private final String warningMessage;
