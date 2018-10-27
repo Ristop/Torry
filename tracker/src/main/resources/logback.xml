@@ -8,7 +8,7 @@
         </encoder>
     </appender>
 
-    <logger name="ut.ee.xtorrent" level="${xtorrent.logging.level:-INFO}"/>
+    <logger name="ut.ee.torry" level="${torry.logging.level:-INFO}"/>
 
     <root level="${vmar.logging.level:-INFO}">
         <appender-ref ref="STDOUT"/>
