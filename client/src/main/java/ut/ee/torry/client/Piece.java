@@ -4,6 +4,7 @@ import be.christophedetroyer.bencoding.Utils;
 import be.christophedetroyer.torrent.Torrent;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -16,14 +17,14 @@ public class Piece {
 
     private final int id;
     private final byte[] bytes;
-    private final boolean isCorrect;
+    private final boolean valid;
     private final Torrent torrent;
 
     public Piece(int id, Torrent torrent, byte[] bytes) {
         this.id = id;
         this.bytes = bytes;
         this.torrent = torrent;
-        this.isCorrect = verifyCorrectness();
+        this.valid = verifyCorrectness();
     }
 
     private boolean verifyCorrectness() {
@@ -42,24 +43,27 @@ public class Piece {
         return torrent.getPieces().get(id);
     }
 
-    public boolean isCorrect() {
+    public boolean isValid() {
         byte[] digbyte = DigestUtils.sha(this.bytes);
         String sha1 = Utils.bytesToHex(digbyte);
         return getHash().equals(sha1);
     }
 
-    public void writeBytes(String clientPath) { // TODO: multiple torrent file case
+    public void writeBytes(String clientPath) {
         if (torrent.isSingleFileTorrent()) {
             try {
-                writeBytesToFile(clientPath + "/" + this.torrent.getName());
+                writeBytesToFile(clientPath + File.separator + this.torrent.getName());
             } catch (IOException e) {
-                createFile(clientPath + "/" + this.torrent.getName());
+                createFile(clientPath + File.separator + this.torrent.getName());
                 try {
-                    writeBytesToFile(clientPath + "/" + this.torrent.getName());
+                    writeBytesToFile(clientPath + File.separator + this.torrent.getName());
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
             }
+        } else {
+            // TODO: multiple torrent file case
+            throw new NotImplementedException("Multiple torrent file write bytes not implemented.");
         }
     }
 

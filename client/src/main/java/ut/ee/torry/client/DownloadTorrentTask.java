@@ -4,6 +4,7 @@ import be.christophedetroyer.torrent.Torrent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.concurrent.Callable;
 
 public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
@@ -17,7 +18,7 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
     public DownloadTorrentTask(
             Torrent torrent,
             String downloadDir
-    ) {
+    ) throws IOException {
         this.torrent = torrent;
         this.downloadDir = downloadDir;
         this.piecesHandler = new PiecesHandler(torrent, downloadDir);
