@@ -47,12 +47,21 @@ public final class TorrentFilesUtil {
 
         log.info("Loading torrent files from directory: {}.", torrentFilesDir);
 
-        return Files.walk(torrentFilesDirPath)
+        List<Torrent> torrents = Files.walk(torrentFilesDirPath)
                 .filter(s -> s.toString().endsWith(TORRENT_FILE_EXTENSION))
                 .map(TorrentFilesUtil::tryReadTorrentFile)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(toList());
+
+        log.info("Read following {} torrent files: {}",
+                torrents.size(),
+                torrents.stream()
+                        .map(Torrent::getName)
+                        .collect(toList())
+        );
+
+        return torrents;
     }
 
     /**
