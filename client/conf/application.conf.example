@@ -1,5 +1,5 @@
 client {
   port = 6868
-  torrentFilesDir = /path/to/torrent/file/dir
-  downloadedFilesDir = /path/to/downloaded/files/dir
+  torrentFilesDir = "/path/to/torrent/file/dir"
+  downloadedFilesDir = "/path/to/downloaded/files/dir"
 }

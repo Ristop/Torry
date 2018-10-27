@@ -20,13 +20,13 @@ public class ClientConfiguration {
     private static final String MAIN_CONFIG = "mainConfig";
     private static final String CLIENT_CONFIG = "clientConfig";
 
-    private static final String PORT = "port";
-    private static final String TORRENT_FILES_DIR = "torrentFilesDir";
-    private static final String DOWNLOADED_FILES_DIR = "downloadedFilesDir";
-    private static final String PEER_ID = "peerId";
+    public static final String PORT = "port";
+    public static final String TORRENT_FILES_DIR = "torrentFilesDir";
+    public static final String DOWNLOADED_FILES_DIR = "downloadedFilesDir";
+    public static final String PEER_ID = "peerId";
 
-    public static final String CLIENT_ID_PREFIX = "TR";
-    public static final String CLIENT_VERSION_NR = "0001";
+    private static final String CLIENT_ID_PREFIX = "TR";
+    private static final String CLIENT_VERSION_NR = "0001";
 
     @Bean(name = MAIN_CONFIG)
     public Config config() {

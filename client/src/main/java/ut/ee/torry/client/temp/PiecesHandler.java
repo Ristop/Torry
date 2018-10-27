@@ -1,4 +1,4 @@
-package ut.ee.torry.client;
+package ut.ee.torry.client.temp;
 
 import be.christophedetroyer.torrent.Torrent;
 import org.slf4j.Logger;

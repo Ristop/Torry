@@ -1,4 +1,4 @@
-package ut.ee.torry.client;
+package ut.ee.torry.client.temp;
 
 import org.apache.commons.io.FileUtils;
 
