@@ -11,7 +11,7 @@ public class Piece {
     private final String hash;
     private final boolean isCorrect;
 
-    public Piece(int id, Torrent torrent, byte[] bytes){
+    public Piece(int id, Torrent torrent, byte[] bytes) {
         this.id = id;
         this.bytes = bytes;
         this.hash = torrent.getPieces().get(id);

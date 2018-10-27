@@ -8,10 +8,14 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Random;
+
 @Configuration
 public class ClientConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(ClientConfiguration.class);
+
+    private static Random r = new Random();
 
     private static final String MAIN_CONFIG = "mainConfig";
     private static final String CLIENT_CONFIG = "clientConfig";
@@ -19,6 +23,10 @@ public class ClientConfiguration {
     private static final String PORT = "port";
     private static final String TORRENT_FILES_DIR = "torrentFilesDir";
     private static final String DOWNLOADED_FILES_DIR = "downloadedFilesDir";
+    private static final String PEER_ID = "peerId";
+
+    public static final String CLIENT_ID_PREFIX = "TR";
+    public static final String CLIENT_VERSION_NR = "0001";
 
     @Bean(name = MAIN_CONFIG)
     public Config config() {
@@ -55,6 +63,24 @@ public class ClientConfiguration {
             @Qualifier(CLIENT_CONFIG) Config config
     ) {
         return config.getString(DOWNLOADED_FILES_DIR);
+    }
+
+    /**
+     * @return Azureus-style peer-id
+     * format: ('-', two characters for client id, four ascii digits for version number, '-', 12 random digits)
+     * returned String is exactly 20 bytes (characters) long.
+     */
+    @Bean(PEER_ID)
+    public String peerId() {
+        return "-" + CLIENT_ID_PREFIX + CLIENT_VERSION_NR + "-" + get12DigitRandomNumber();
+    }
+
+    private static String get12DigitRandomNumber() {
+        StringBuilder sb = new StringBuilder(12);
+        for (int i = 0; i < 12; i++) {
+            sb.append((char) ('0' + r.nextInt(10)));
+        }
+        return sb.toString();
     }
 
 }

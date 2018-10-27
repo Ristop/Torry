@@ -23,16 +23,6 @@ public class ClientApplication {
         SpringApplication app = new SpringApplication(ClientApplication.class);
         app.setBannerMode(Banner.Mode.LOG);
         app.run(args);
-
-//        int peerServerPort = Integer.parseInt(args[0]);
-//        int otherClientPort = Integer.parseInt(args[1]);
-//        String hasFile, needsFile;
-//        hasFile = args[2];
-//      //  String pathToNeededFile = args[3];
-//
-//        new ClientThreadRead(otherClientPort).start();
-//        //startClient("localhost",6869);
-//        startServerSocket(peerServerPort, hasFile);
     }
 
     @PreDestroy
