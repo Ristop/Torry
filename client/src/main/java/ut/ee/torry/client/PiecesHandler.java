@@ -26,24 +26,35 @@ public class PiecesHandler {
     private final int pieceSize;
     private final int piecesCount;
 
-    private final Set<Integer> existingPieces;
-    private final Set<Integer> notExistingPieces;
+    private final Set<Integer> existingPieceIndexes;
+    private final Set<Integer> notExistingPieceIndexes;
 
     public PiecesHandler(Torrent torrent, String downloadFileDirPath) throws IOException {
         this.torrent = Objects.requireNonNull(torrent);
         this.downloadFileDir = Objects.requireNonNull(downloadFileDirPath);
         this.pieceSize = torrent.getPieceLength().intValue();
         this.piecesCount = torrent.getPieces().size();
-        this.existingPieces = findAvailablePieceIndexes();
-        this.notExistingPieces = findNotAvailablePieceIndexes(existingPieces);
+        this.existingPieceIndexes = findAvailablePieceIndexes();
+        this.notExistingPieceIndexes = findNotAvailablePieceIndexes(existingPieceIndexes);
     }
 
-    public Set<Integer> getExistingPieces() {
-        return this.existingPieces;
+    public long getBytesDownloaded() {
+        long existingPiecesSize = existingPieceIndexes.size() * pieceSize - 1;
+
+        // If we have last piece
+        if (existingPieceIndexes.contains(piecesCount - 1)) {
+            existingPiecesSize += torrent.getTotalSize() - existingPiecesSize;
+        }
+
+        return existingPiecesSize;
     }
 
-    public Set<Integer> getNotExistingPieces() {
-        return this.notExistingPieces;
+    public Set<Integer> getExistingPieceIndexes() {
+        return this.existingPieceIndexes;
+    }
+
+    public Set<Integer> getNotExistingPieceIndexes() {
+        return this.notExistingPieceIndexes;
     }
 
     public int getPiecesCount() {
@@ -67,8 +78,8 @@ public class PiecesHandler {
         Piece piece = new Piece(id, this.torrent, bytes);
         piece.writeBytes(this.downloadFileDir);
         if (piece.isValid()) {
-            this.notExistingPieces.remove(id);
-            this.existingPieces.add(id);
+            this.notExistingPieceIndexes.remove(id);
+            this.existingPieceIndexes.add(id);
         }
     }
 

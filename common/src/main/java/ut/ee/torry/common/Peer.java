@@ -1,16 +1,19 @@
-package ut.ee.torry.tracker;
+package ut.ee.torry.common;
 
 import java.util.Objects;
 
 public class Peer {
 
-    private final String id;
-    private final String ip;
-    private final int port;
+    private String id;
+    private String ip;
+    private int port;
 
     private long uploaded;
     private long downloaded;
     private long left;
+
+    public Peer() {
+    }
 
     /**
      * @param id         unique ID for the client (peer).
@@ -57,6 +60,30 @@ public class Peer {
         return left == 0;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public void setUploaded(long uploaded) {
+        this.uploaded = uploaded;
+    }
+
+    public void setDownloaded(long downloaded) {
+        this.downloaded = downloaded;
+    }
+
+    public void setLeft(long left) {
+        this.left = left;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -74,6 +101,7 @@ public class Peer {
     public String toString() {
         return "Peer{" +
                 "id='" + id + '\'' +
+                ", ip='" + ip + '\'' +
                 ", port=" + port +
                 '}';
     }

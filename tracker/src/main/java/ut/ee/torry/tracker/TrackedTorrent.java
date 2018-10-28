@@ -2,6 +2,8 @@ package ut.ee.torry.tracker;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ut.ee.torry.common.Peer;
+import ut.ee.torry.common.TrackerResponse;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +40,7 @@ public class TrackedTorrent {
     }
 
     public void update(Peer peer, Event event) {
+        log.info("Torrent[{}]: Updating with peer: {}", infoHash, peer);
         if (event == Event.COMPLETE || peer.getLeft() == 0) {
             addPeer(peer);
         } else if (event == Event.START) {

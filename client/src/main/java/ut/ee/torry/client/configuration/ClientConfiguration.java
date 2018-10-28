@@ -1,4 +1,4 @@
-package ut.ee.torry.client;
+package ut.ee.torry.client.configuration;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
