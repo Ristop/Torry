@@ -36,7 +36,7 @@ public class Piece {
     }
 
     public boolean isValid() {
-        String calculatedHash = Utils.bytesToHex(DigestUtils.sha(this.bytes));
+        String calculatedHash = Utils.bytesToHex(DigestUtils.sha1(this.bytes));
         return hash.equals(calculatedHash);
     }
 
