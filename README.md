@@ -26,3 +26,5 @@ Requires Java 8
 ### Client
 * Set up `application.conf` file. Sample of this file can be found from `client/conf/application.conf.example`.
 * `java -Dconfig.file=/path/to/application.conf -jar client/target/torry-client-*.jar`
+
+### Project documentation can be found here: https://www.overleaf.com/16481102jgzcbwmyykyr
