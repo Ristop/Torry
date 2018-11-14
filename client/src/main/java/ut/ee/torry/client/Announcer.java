@@ -24,23 +24,88 @@ public class Announcer {
     }
 
     public TrackerResponse announce(
-            String trackerURL,
-            String infoHash,
-            String peerId,
-            int port,
-            long uploaded,
-            long downloaded,
-            long left
-    ) throws URISyntaxException {
-        URIBuilder uriBuilder = new URIBuilder(trackerURL);
-        uriBuilder.addParameter("info_hash", infoHash);
-        uriBuilder.addParameter("peer_id", peerId);
-        uriBuilder.addParameter("port", String.valueOf(port));
-        uriBuilder.addParameter("uploaded", String.valueOf(uploaded));
-        uriBuilder.addParameter("downloaded", String.valueOf(downloaded));
-        uriBuilder.addParameter("left", String.valueOf(left));
+            AnnounceParams params
+    ) {
+        URIBuilder uriBuilder;
+        try {
+            uriBuilder = new URIBuilder(params.getTrackerURL());
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+        uriBuilder.addParameter("info_hash", params.getInfoHash());
+        uriBuilder.addParameter("peer_id", params.getPeerId());
+        uriBuilder.addParameter("port", String.valueOf(params.getPort()));
+        uriBuilder.addParameter("uploaded", String.valueOf(params.getUploaded()));
+        uriBuilder.addParameter("downloaded", String.valueOf(params.getDownloaded()));
+        uriBuilder.addParameter("left", String.valueOf(params.getLeft()));
+        String event = params.getEvent();
+        if (event != null) {
+            uriBuilder.addParameter("event", String.valueOf(event));
+        }
 
         return restTemplate.getForObject(uriBuilder.toString(), TrackerResponse.class);
+    }
+
+    public static class AnnounceParams {
+
+        private final String trackerURL;
+        private final String infoHash;
+        private final String peerId;
+        private final int port;
+        private final long uploaded;
+        private final long downloaded;
+        private final long left;
+        private String event;
+
+        public AnnounceParams(
+                String trackerURL, String infoHash, String peerId, int port, long uploaded, long downloaded, long left
+        ) {
+            this.trackerURL = trackerURL;
+            this.infoHash = infoHash;
+            this.peerId = peerId;
+            this.port = port;
+            this.uploaded = uploaded;
+            this.downloaded = downloaded;
+            this.left = left;
+        }
+
+        public AnnounceParams withEvent(String event) {
+            this.event = event;
+            return this;
+        }
+
+        public String getTrackerURL() {
+            return trackerURL;
+        }
+
+        public String getInfoHash() {
+            return infoHash;
+        }
+
+        public String getPeerId() {
+            return peerId;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
+        public long getUploaded() {
+            return uploaded;
+        }
+
+        public long getDownloaded() {
+            return downloaded;
+        }
+
+        public long getLeft() {
+            return left;
+        }
+
+        public String getEvent() {
+            return event;
+        }
+
     }
 
 }

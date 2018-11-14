@@ -12,7 +12,7 @@ public class TrackedTorrentService {
 
     private static final Logger log = LoggerFactory.getLogger(TrackedTorrentService.class);
 
-    private static ConcurrentMap<String, TrackedTorrent> trackedTorrents = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, TrackedTorrent> trackedTorrents = new ConcurrentHashMap<>();
 
     /**
      * @param infoHash hash value of the info key for a given torrent.
@@ -26,6 +26,10 @@ public class TrackedTorrentService {
             log.info("Adding new tracked torrent with info hash: {}", infoHash);
             return trackedTorrents.get(infoHash);
         }
+    }
+
+    public ConcurrentMap<String, TrackedTorrent> getTrackedTorrents() {
+        return trackedTorrents;
     }
 
 }

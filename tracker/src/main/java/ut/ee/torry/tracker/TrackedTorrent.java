@@ -68,7 +68,7 @@ public class TrackedTorrent {
      * @param peer peer for which peers are requested
      * @return all peers excluding @param peer
      */
-    private Set<Peer> getPeers(Peer peer) {
+    public Set<Peer> getPeers(Peer peer) {
         HashMap<String, Peer> allPeers = new HashMap<>(peers);
         allPeers.remove(peer.getId());
         return new HashSet<>(allPeers.values());

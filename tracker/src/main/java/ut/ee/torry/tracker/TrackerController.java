@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ut.ee.torry.common.Peer;
 import ut.ee.torry.common.TrackerResponse;
 
+import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 @RestController
@@ -68,6 +69,11 @@ public class TrackerController {
         Event event = eventName != null ? Event.getEvent(eventName) : Event.PERIODIC;
         trackedTorrent.update(peer, event);
         return trackedTorrent.getResponseForPeer(peer, TRACKER_ID, DEFAULT_INTERVAL);
+    }
+
+    @RequestMapping("/all")
+    public Map<String, TrackedTorrent> all() {
+        return torrentService.getTrackedTorrents();
     }
 
 }
