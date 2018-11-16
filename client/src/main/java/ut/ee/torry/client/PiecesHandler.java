@@ -3,7 +3,6 @@ package ut.ee.torry.client;
 import be.christophedetroyer.torrent.Torrent;
 import be.christophedetroyer.torrent.TorrentFile;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +13,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import javax.activity.InvalidActivityException;
+
 
 public class PiecesHandler {
 
@@ -52,8 +53,7 @@ public class PiecesHandler {
         if (torrent.isSingleFileTorrent()) {
             return getPieceByIdForSingleFile(id);
         } else {
-            // TODO: multiple file torrent case
-            throw new NotImplementedException("Multi file torrent getPiece not yet implemented");
+            return getPieceByIdForDirectory(id);
         }
     }
 
@@ -67,6 +67,8 @@ public class PiecesHandler {
         if (piece.isValid()) {
             this.notExistingPieces.remove(id);
             this.existingPieces.add(id);
+        } else {
+            throw new InvalidActivityException("You are trying to write not correct bytes");
         }
     }
 
@@ -107,6 +109,7 @@ public class PiecesHandler {
                         (pieceSize * (pieceIndex + 1))
                 );
             } else {
+                int a = totalBytes.length - 1;
                 currentPieceBytes = Arrays.copyOfRange(
                         totalBytes,
                         pieceSize * pieceIndex,
@@ -180,6 +183,31 @@ public class PiecesHandler {
             return piece;
         } else {
             throw new IllegalStateException("Piece is either not downloaded or there's a mistake in the code");
+        }
+    }
+
+    private Piece getPieceByIdForDirectory(int id) {
+        String fullPath = this.downloadFileDir + File.separator + this.torrent.getName();
+        byte[] dirContent = getDictionaryBytes(fullPath);
+        return getPieceByIdFromBytes(dirContent, id);
+    }
+
+    private Piece getPieceByIdFromBytes(byte[] content, int id) {
+        int endIndex = this.torrent.getPieceLength().intValue() * (id + 1);
+        if (endIndex > content.length) {  // last piece is not full piece
+            endIndex = content.length;
+        }
+        byte[] currentPieceBytes = Arrays.copyOfRange(
+                content,
+                this.torrent.getPieceLength().intValue() * id,
+                endIndex
+        );
+        Piece piece = new Piece(id, this.torrent, currentPieceBytes);
+        if (piece.isValid()) {
+            return piece;
+        } else {
+            throw new IllegalStateException("Piece is either not downloaded or there's a mistake in " +
+                    "the code with piece " + "id = " + id);
         }
     }
 
