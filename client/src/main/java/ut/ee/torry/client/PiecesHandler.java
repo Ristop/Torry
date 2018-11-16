@@ -46,8 +46,11 @@ public class PiecesHandler {
         if (existingPieceIndexes.contains(piecesCount - 1)) {
             existingPiecesSize += torrent.getTotalSize() - existingPiecesSize;
         }
-
         return existingPiecesSize;
+    }
+
+    public Set<Integer> getExistingPieceIndexes() {
+        return this.existingPieceIndexes;
     }
 
     public Set<Integer> getNotExistingPieceIndexes() {
@@ -191,9 +194,8 @@ public class PiecesHandler {
                 this.torrent.getPieceLength().intValue() * id,
                 endIndex
         );
-        
-        Piece piece = new Piece(id, this.torrent, currentPieceBytes);
 
+        Piece piece = new Piece(id, this.torrent, currentPieceBytes);
         if (piece.isValid()) {
             return piece;
         } else {
