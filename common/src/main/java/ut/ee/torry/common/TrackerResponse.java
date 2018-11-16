@@ -111,6 +111,20 @@ public final class TrackerResponse {
         this.peers = peers;
     }
 
+    @Override
+    public String toString() {
+        return "TrackerResponse{" +
+                "failureReason='" + failureReason + '\'' +
+                ", warningMessage='" + warningMessage + '\'' +
+                ", interval=" + interval +
+                ", minInterval=" + minInterval +
+                ", trackerId='" + trackerId + '\'' +
+                ", complete=" + complete +
+                ", incomplete=" + incomplete +
+                ", peers=" + peers +
+                '}';
+    }
+
     public static TrackerResponseBuilder builder() {
         return new TrackerResponseBuilder();
     }

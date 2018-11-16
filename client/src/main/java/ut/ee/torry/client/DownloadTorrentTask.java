@@ -3,11 +3,22 @@ package ut.ee.torry.client;
 import be.christophedetroyer.torrent.Torrent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ut.ee.torry.common.Peer;
 import ut.ee.torry.common.TrackerResponse;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +37,7 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
     private final String downloadDir;
     private final PiecesHandler piecesHandler;
     private final Announcer announcer;
+    private final Map<Peer, List<Integer>> peers = new ConcurrentHashMap<>();
 
     public DownloadTorrentTask(
             String peerId,
@@ -45,7 +57,7 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
 
     private void startAnnouncer() {
         announceExecutor.scheduleAtFixedRate(
-                this::announceAndHandleResponse, 0L, DEFAULT_ANNOUNCE_INTERVAL, TimeUnit.SECONDS
+                this::announceAndHandleResponse, 5L, DEFAULT_ANNOUNCE_INTERVAL, TimeUnit.SECONDS
         );
     }
 
@@ -62,25 +74,65 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
                         torrent.getTotalSize() - piecesHandler.getBytesDownloaded()
                 )
         );
+        log.info("Announce response: {}", response);
+        for (Peer peer : response.getPeers()) {
+            try {
+                NetworkManager nm = new NetworkManager(peer);
+                for (Integer i : piecesHandler.getExistingPieceIndexes()) {
+                    log.info("Sending bytes for piece with index {}", i);
+                    nm.sendPiece(piecesHandler.getPiece(i));
+                    break;
+                }
+            } catch (IOException e) {
+                log.error("Error sending bytes. ", e);
+            }
+        }
         // TODO: handle response
     }
 
+
     @Override
-    public DownloadTorrentTask call() {
+    public DownloadTorrentTask call() throws IOException {
         log.info("Starting downloading torrent: {}", torrent.getName());
         log.info("Existing pieces: {}", piecesHandler.getExistingPieceIndexes());
         log.info("Not existing pieces: {}", piecesHandler.getNotExistingPieceIndexes());
         log.info("Torrent pieces count: {}", torrent.getPieces().size());
 
-        while (!announceExecutor.isTerminated()) {
-            try {
-                Thread.sleep(3000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            ExecutorService executor = Executors.newCachedThreadPool();
+
+            while (true) {
+                Socket socket = serverSocket.accept();
+
+                executor.execute(() -> {
+                    try (
+                            DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
+                            DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))
+                    ) {
+                        int count;
+                        byte[] bytes = new byte[4096];
+
+                        while ((count = in.read(bytes)) > 0) {
+                            log.info("{}", count);
+                            dos.write(bytes, 0, count);
+                        }
+
+                        log.info("{} received bytes: {}", peerId, dos.toString());
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                });
+
+
             }
+
+
         }
 
-        return this;
+//        return this;
     }
 
     @Override
