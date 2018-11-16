@@ -57,7 +57,7 @@ public class ClientStarter {
 
     @PostConstruct
     private void start() throws InterruptedException, ExecutionException, IOException {
-        log.info("Starting client with peer id {}, running on port {}.", peerId, port);
+        log.info("Starting client with peer id {}, listening on port {}.", peerId, port);
         downloadTorrents();
     }
 

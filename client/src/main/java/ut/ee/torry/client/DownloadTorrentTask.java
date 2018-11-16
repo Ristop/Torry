@@ -7,9 +7,7 @@ import ut.ee.torry.common.Peer;
 import ut.ee.torry.common.TrackerResponse;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -28,7 +26,7 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
     private static final Logger log = LoggerFactory.getLogger(DownloadTorrentTask.class);
 
     private final ScheduledExecutorService announceExecutor = Executors.newSingleThreadScheduledExecutor();
-    private static final long DEFAULT_ANNOUNCE_INTERVAL = 10L;
+    private static final long DEFAULT_ANNOUNCE_INTERVAL = 15L;
 
     private final String peerId;
     private final int port;
@@ -75,11 +73,12 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
                 )
         );
         log.info("Announce response: {}", response);
+
         for (Peer peer : response.getPeers()) {
             try {
                 NetworkManager nm = new NetworkManager(peer);
                 for (Integer i : piecesHandler.getExistingPieceIndexes()) {
-                    log.info("Sending bytes for piece with index {}", i);
+                    log.info("Sending bytes for piece with index {} to peer {}", i, peer);
                     nm.sendPiece(piecesHandler.getPiece(i));
                     break;
                 }
@@ -87,6 +86,7 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
                 log.error("Error sending bytes. ", e);
             }
         }
+
         // TODO: handle response
     }
 
@@ -104,35 +104,39 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
 
             while (true) {
                 Socket socket = serverSocket.accept();
+                log.info("Starting to receive info");
 
                 executor.execute(() -> {
-                    try (
-                            DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
-                            DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))
-                    ) {
-                        int count;
-                        byte[] bytes = new byte[4096];
-
-                        while ((count = in.read(bytes)) > 0) {
-                            log.info("{}", count);
-                            dos.write(bytes, 0, count);
-                        }
-
-                        log.info("{} received bytes: {}", peerId, dos.toString());
-
+                    try (DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()))) {
+                        parseReceivedStream(in);
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        log.error("Unable to read from socket: ", e);
                     }
 
                 });
 
-
             }
-
 
         }
 
-//        return this;
+    }
+
+    private void parseReceivedStream(DataInputStream dis) throws IOException {
+        log.info("Reading info from stream");
+
+        int len = dis.readInt();
+        byte id = dis.readByte();
+
+        switch (id) {
+            case 7:
+                short index = dis.readShort();
+                byte[] bytes = new byte[len - 7];
+                log.info("Received piece <len:{}><id:{}><index:{}><data:omitted>", len, id, index);
+                break;
+            default:
+                log.warn("Received event with id {} which is not yet supported or unknown.", id);
+        }
+
     }
 
     @Override
