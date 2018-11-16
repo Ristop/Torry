@@ -1,18 +1,40 @@
-package ut.ee.torry.tracker;
+package ut.ee.torry.common;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Optional;
 import java.util.Set;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public final class TrackerResponse {
 
-    private final String failureReason;
-    private final String warningMessage;
-    private final Integer interval;
-    private final Integer minInterval;
-    private final String trackerId;
-    private final Long complete;
-    private final Long incomplete;
-    private final Set<Peer> peers;
+    @JsonProperty
+    private String failureReason;
+
+    @JsonProperty
+    private String warningMessage;
+
+    @JsonProperty
+    private Integer interval;
+
+    @JsonProperty
+    private Integer minInterval;
+
+    @JsonProperty
+    private String trackerId;
+
+    @JsonProperty
+    private Long complete;
+
+    @JsonProperty
+    private Long incomplete;
+
+    @JsonProperty
+    private Set<Peer> peers;
+
+    public TrackerResponse() {
+    }
 
     private TrackerResponse(TrackerResponseBuilder trb) {
         this.failureReason = trb.getFailureReason();
@@ -55,6 +77,52 @@ public final class TrackerResponse {
 
     public Set<Peer> getPeers() {
         return peers;
+    }
+
+    public void setFailureReason(String failureReason) {
+        this.failureReason = failureReason;
+    }
+
+    public void setWarningMessage(String warningMessage) {
+        this.warningMessage = warningMessage;
+    }
+
+    public void setInterval(Integer interval) {
+        this.interval = interval;
+    }
+
+    public void setMinInterval(Integer minInterval) {
+        this.minInterval = minInterval;
+    }
+
+    public void setTrackerId(String trackerId) {
+        this.trackerId = trackerId;
+    }
+
+    public void setComplete(Long complete) {
+        this.complete = complete;
+    }
+
+    public void setIncomplete(Long incomplete) {
+        this.incomplete = incomplete;
+    }
+
+    public void setPeers(Set<Peer> peers) {
+        this.peers = peers;
+    }
+
+    @Override
+    public String toString() {
+        return "TrackerResponse{" +
+                "failureReason='" + failureReason + '\'' +
+                ", warningMessage='" + warningMessage + '\'' +
+                ", interval=" + interval +
+                ", minInterval=" + minInterval +
+                ", trackerId='" + trackerId + '\'' +
+                ", complete=" + complete +
+                ", incomplete=" + incomplete +
+                ", peers=" + peers +
+                '}';
     }
 
     public static TrackerResponseBuilder builder() {

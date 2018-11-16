@@ -1,6 +1,8 @@
 package ut.ee.torry.tracker;
 
 import org.junit.jupiter.api.Test;
+import ut.ee.torry.common.Peer;
+import ut.ee.torry.common.TrackerResponse;
 
 import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
