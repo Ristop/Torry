@@ -1,5 +1,6 @@
 package ut.ee.torry.client;
 
+import be.christophedetroyer.torrent.Torrent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ut.ee.torry.common.Peer;
@@ -13,10 +14,38 @@ public class NetworkManager {
 
     private static final Logger log = LoggerFactory.getLogger(NetworkManager.class);
 
+    private static final String PSTR = "BitTorrent protocol";
+
     private final Socket socket;
 
     public NetworkManager(Peer peer) throws IOException {
         this.socket = new Socket(peer.getIp(), peer.getPort());
+    }
+
+    /**
+     * This must be the first message transmitted by the client!
+     * <pstrlen><pstr><reserved><info_hash><peer_id>
+     */
+    public void handShake(Torrent torrent, String peerId) throws IOException {
+        try (DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))) {
+            int pstrLen = 19;
+
+            dos.writeByte(pstrLen);
+            dos.writeBytes(PSTR);
+
+            // Reserved 8 bits
+            for (int i = 0; i < 8; i++) {
+                dos.writeByte(0);
+            }
+
+            // 20-bytes
+            dos.writeBytes(torrent.getInfo_hash());
+
+            // 20-bytes
+            dos.writeBytes(peerId);
+
+            log.info("Sent handshake request to peer: {}", peerId);
+        }
     }
 
     /**
