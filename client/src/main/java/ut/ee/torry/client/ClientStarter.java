@@ -65,13 +65,18 @@ public class ClientStarter {
      * Entry point for starting downloads. WORK IN PROGRESS and not yet fully implemented
      */
     private void downloadTorrents() throws InterruptedException, ExecutionException, IOException {
+
+        // Start listener
+        ClientServerListener csl = new ClientServerListener(port);
+        csl.startListener();
+
         CompletionService<DownloadTorrentTask> completionService = new ExecutorCompletionService<>(executorService);
 
         // Create a download torrent task for each torrent.
         // I suspect that this pattern is temporary and will change as the code progresses
         for (Torrent torrent : torrents) {
             completionService.submit(
-                    new DownloadTorrentTask(peerId, port, torrent, downloadedFiledDir, announcer)
+                    new DownloadTorrentTask(peerId, port, torrent, downloadedFiledDir, announcer, csl)
             );
         }
 

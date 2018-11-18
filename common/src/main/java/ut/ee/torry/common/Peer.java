@@ -89,7 +89,7 @@ public class Peer {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Peer peer = (Peer) o;
-        return Objects.equals(id, peer.id);
+        return Objects.equals(id, peer.id) || (Objects.equals(ip, peer.ip) && Objects.equals(port, peer.port));
     }
 
     @Override
