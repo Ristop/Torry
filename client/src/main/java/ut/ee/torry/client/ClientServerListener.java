@@ -71,7 +71,7 @@ public class ClientServerListener implements Runnable {
         switch (id) {
             case 7:
                 short index = dis.readShort();
-                byte[] bytes = new byte[len - 7];
+                byte[] bytes = new byte[len - 5];
                 dis.read(bytes);
                 log.info("Received piece <len:{}><id:{}><index:{}><data:omitted>", len, id, index);
                 return new SendPiece(index, bytes);

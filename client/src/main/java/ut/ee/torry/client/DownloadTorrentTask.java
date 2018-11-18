@@ -3,6 +3,7 @@ package ut.ee.torry.client;
 import be.christophedetroyer.torrent.Torrent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ut.ee.torry.client.event.SendPiece;
 import ut.ee.torry.client.event.TorrentRequest;
 import ut.ee.torry.common.Peer;
 import ut.ee.torry.common.TrackerResponse;
@@ -150,7 +151,20 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask>, AutoC
         while (!Thread.currentThread().isInterrupted()) {
             TorrentRequest event = eventQueue.take();
             log.info("Received event: {}", event);
-            // TODO: handle event
+
+            if (event instanceof SendPiece) {
+                SendPiece sendPiece = (SendPiece) event;
+                try {
+                    if (!piecesHandler.hasPiece(sendPiece.getIndex())) {
+                        log.info("Writing piece {}", sendPiece);
+                        piecesHandler.writePiece(sendPiece.getIndex(), sendPiece.getBytes());
+                        log.info("Successfully wrote piece {}", sendPiece);
+                    }
+                } catch (IOException e) {
+                    log.error("Unable to write received piece: ", e);
+                }
+            }
+            // TODO: handle other events
         }
 
         return this;

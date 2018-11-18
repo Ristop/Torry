@@ -15,8 +15,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
-import javax.activity.InvalidActivityException;
-
 
 public class PiecesHandler {
 
@@ -61,6 +59,10 @@ public class PiecesHandler {
         return this.piecesCount;
     }
 
+    public boolean hasPiece(int index) {
+        return this.existingPieceIndexes.contains(index);
+    }
+
     public Piece getPiece(int id) throws IOException {
         if (torrent.isSingleFileTorrent()) {
             return getPieceByIdForSingleFile(id);
@@ -80,7 +82,7 @@ public class PiecesHandler {
             this.notExistingPieceIndexes.remove(id);
             this.existingPieceIndexes.add(id);
         } else {
-            throw new InvalidActivityException("You are trying to write not correct bytes");
+            throw new IllegalStateException("You are trying to write not correct bytes");
         }
     }
 

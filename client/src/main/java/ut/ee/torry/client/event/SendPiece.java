@@ -1,7 +1,5 @@
 package ut.ee.torry.client.event;
 
-import java.util.Arrays;
-
 public class SendPiece implements TorrentRequest {
 
     private final short index;
@@ -24,7 +22,7 @@ public class SendPiece implements TorrentRequest {
     public String toString() {
         return "SendPiece{" +
                 "index=" + index +
-                ", bytes=" + Arrays.toString(bytes) +
+                ", bytes=<ommitted>" +
                 '}';
     }
 
