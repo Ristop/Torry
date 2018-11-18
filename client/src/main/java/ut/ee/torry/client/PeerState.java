@@ -4,7 +4,7 @@ import ut.ee.torry.common.Peer;
 
 import java.io.IOException;
 
-public class PeerState {
+public class PeerState implements AutoCloseable {
 
     private boolean amChoking = true;
     private boolean interested = false;
@@ -19,6 +19,11 @@ public class PeerState {
 
     public void sendPiece(Piece piece) throws IOException {
         networkManager.sendPiece(piece);
+    }
+
+    @Override
+    public void close() throws Exception {
+        networkManager.close();
     }
 
 }

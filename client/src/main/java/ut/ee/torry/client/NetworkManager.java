@@ -10,7 +10,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
-public class NetworkManager {
+public class NetworkManager implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(NetworkManager.class);
 
@@ -18,10 +18,12 @@ public class NetworkManager {
 
     private final String ip;
     private final int port;
+    private final Socket socket;
 
     public NetworkManager(Peer peer) throws IOException {
         this.ip = peer.getIp();
         this.port = peer.getPort();
+        this.socket = new Socket(ip, port);
     }
 
     /**
@@ -31,26 +33,26 @@ public class NetworkManager {
     public void handShake(Torrent torrent, String peerId) throws IOException {
         Socket socket = new Socket(ip, port);
 
-        try (DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))) {
-            int pstrLen = 19;
+        DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+        int pstrLen = 19;
 
-            dos.writeByte(pstrLen);
-            dos.writeBytes(PSTR);
+        dos.writeByte(pstrLen);
+        dos.writeBytes(PSTR);
 
-            // Reserved 8 bits
-            for (int i = 0; i < 8; i++) {
-                dos.writeByte(0);
-            }
-
-            // 20-bytes
-            dos.writeBytes(torrent.getInfo_hash());
-
-            // 20-bytes
-            dos.writeBytes(peerId);
-
-            log.info("Sent handshake request to peer: {}", peerId);
+        // Reserved 8 bits
+        for (int i = 0; i < 8; i++) {
+            dos.writeByte(0);
         }
+
+        // 20-bytes
+        dos.writeBytes(torrent.getInfo_hash());
+
+        // 20-bytes
+        dos.writeBytes(peerId);
+
+        log.info("Sent handshake request to peer: {}", peerId);
     }
+
 
     /**
      * <len=0013><id=6><index>
@@ -58,16 +60,15 @@ public class NetworkManager {
     public void requestPiece(int index) throws IOException {
         Socket socket = new Socket(ip, port);
 
-        try (DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))) {
-            int len = 5;
-            byte id = 6;
+        DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+        int len = 5;
+        byte id = 6;
 
-            dos.writeInt(len);
-            dos.writeByte(id);
-            dos.writeShort(index);
+        dos.writeInt(len);
+        dos.writeByte(id);
+        dos.writeShort(index);
 
-            log.info("Sent request piece request <len:{}><id:{}><data:omitted>", len, id, index);
-        }
+        log.info("Sent request piece request <len:{}><id:{}><data:omitted>", len, id, index);
     }
 
     /**
@@ -79,18 +80,22 @@ public class NetworkManager {
     public void sendPiece(Piece piece) throws IOException {
         Socket socket = new Socket(ip, port);
 
-        try (DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))) {
-            int len = 5 + piece.getBytes().length;
-            byte id = 7;
-            int index = piece.getId();
+        DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+        int len = 5 + piece.getBytes().length;
+        byte id = 7;
+        int index = piece.getId();
 
-            dos.writeInt(len);
-            dos.writeByte(id);
-            dos.writeShort(index);
-            dos.write(piece.getBytes());
+        dos.writeInt(len);
+        dos.writeByte(id);
+        dos.writeShort(index);
+        dos.write(piece.getBytes());
 
-            log.info("Sent send piece request <len:{}><id:{}><index:{}><data:omitted>", len, id, index);
-        }
+        log.info("Sent send piece request <len:{}><id:{}><index:{}><data:omitted>", len, id, index);
+    }
+
+    @Override
+    public void close() throws Exception {
+        socket.close();
     }
 
 }

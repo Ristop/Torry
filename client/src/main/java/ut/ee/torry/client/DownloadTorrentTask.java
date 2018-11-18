@@ -20,7 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
+public class DownloadTorrentTask implements Callable<DownloadTorrentTask>, AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(DownloadTorrentTask.class);
 
@@ -159,6 +159,13 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask> {
     @Override
     public String toString() {
         return torrent.getName() + " -> " + Paths.get(downloadDir, torrent.getName());
+    }
+
+    @Override
+    public void close() throws Exception {
+        for (PeerState peerState : peers.values()) {
+            peerState.close();
+        }
     }
 
 }
