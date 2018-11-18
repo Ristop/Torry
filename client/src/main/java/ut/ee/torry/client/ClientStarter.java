@@ -6,10 +6,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+import ut.ee.torry.client.event.TorrentRequest;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
@@ -67,16 +70,17 @@ public class ClientStarter {
     private void downloadTorrents() throws InterruptedException, ExecutionException, IOException {
 
         // Start listener
-        ClientServerListener csl = new ClientServerListener(port);
-        csl.startListener();
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        BlockingQueue<TorrentRequest> queue = new ArrayBlockingQueue<>(10);
+        executorService.execute(new ClientServerListener(port, queue));
 
-        CompletionService<DownloadTorrentTask> completionService = new ExecutorCompletionService<>(executorService);
+        CompletionService<DownloadTorrentTask> completionService = new ExecutorCompletionService<>(this.executorService);
 
         // Create a download torrent task for each torrent.
         // I suspect that this pattern is temporary and will change as the code progresses
         for (Torrent torrent : torrents) {
             completionService.submit(
-                    new DownloadTorrentTask(peerId, port, torrent, downloadedFiledDir, announcer, csl)
+                    new DownloadTorrentTask(peerId, port, torrent, downloadedFiledDir, announcer, queue)
             );
         }
 
@@ -88,7 +92,7 @@ public class ClientStarter {
             log.info("{} finished.", downloadTorrentTask);
         }
 
-        executorService.shutdownNow();
+        this.executorService.shutdownNow();
     }
 
 }

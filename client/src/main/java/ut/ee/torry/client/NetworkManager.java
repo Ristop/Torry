@@ -16,10 +16,12 @@ public class NetworkManager {
 
     private static final String PSTR = "BitTorrent protocol";
 
-    private final Socket socket;
+    private final String ip;
+    private final int port;
 
     public NetworkManager(Peer peer) throws IOException {
-        this.socket = new Socket(peer.getIp(), peer.getPort());
+        this.ip = peer.getIp();
+        this.port = peer.getPort();
     }
 
     /**
@@ -27,6 +29,8 @@ public class NetworkManager {
      * <pstrlen><pstr><reserved><info_hash><peer_id>
      */
     public void handShake(Torrent torrent, String peerId) throws IOException {
+        Socket socket = new Socket(ip, port);
+
         try (DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))) {
             int pstrLen = 19;
 
@@ -52,6 +56,8 @@ public class NetworkManager {
      * <len=0013><id=6><index>
      */
     public void requestPiece(int index) throws IOException {
+        Socket socket = new Socket(ip, port);
+
         try (DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))) {
             int len = 5;
             byte id = 6;
@@ -71,6 +77,8 @@ public class NetworkManager {
      * - <len=0007+X><id=7><index><piece>
      */
     public void sendPiece(Piece piece) throws IOException {
+        Socket socket = new Socket(ip, port);
+
         try (DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))) {
             int len = 5 + piece.getBytes().length;
             byte id = 7;

@@ -17,4 +17,8 @@ public class PeerState {
         this.networkManager = new NetworkManager(peer);
     }
 
+    public void sendPiece(Piece piece) throws IOException {
+        networkManager.sendPiece(piece);
+    }
+
 }
