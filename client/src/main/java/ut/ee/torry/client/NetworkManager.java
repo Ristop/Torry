@@ -52,7 +52,7 @@ public class NetworkManager implements AutoCloseable {
     }
 
     /**
-     * <len=0013><id=6><index>
+     * <len=005><id=6><index>
      */
     public void requestPiece(int index) throws IOException {
         DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
@@ -62,8 +62,9 @@ public class NetworkManager implements AutoCloseable {
         dos.writeInt(len);
         dos.writeByte(id);
         dos.writeShort(index);
+        dos.flush();
 
-        log.info("Sent request piece request <len:{}><id:{}><data:omitted>", len, id, index);
+        log.info("Sent request piece request <len:{}><id:{}><index:{}>", len, id, index);
     }
 
     /**

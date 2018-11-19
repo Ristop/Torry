@@ -3,6 +3,7 @@ package ut.ee.torry.client;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ut.ee.torry.client.event.RequestPiece;
 import ut.ee.torry.client.event.SendPiece;
 import ut.ee.torry.client.event.TorrentRequest;
 
@@ -70,16 +71,19 @@ public class ClientServerListener implements Runnable {
         int len = dis.readInt();
         byte id = dis.readByte();
 
-        switch (id) {
-            case 7:
-                short index = dis.readShort();
-                byte[] bytes = new byte[len - 5];
-                dis.read(bytes);
-                log.info("Received piece <len:{}><id:{}><index:{}><data:omitted>", len, id, index);
-                return new SendPiece(index, bytes);
-            default:
-                log.warn("Received event with id {} which is not yet supported or unknown.", id);
-                throw new NotImplementedException("Received event with id " + id + " which is not yet supported or unknown.");
+        if (id == 6) {
+            short index = dis.readShort();
+            log.info("Received request piece <len:{}><id:{}><index:{}>", len, id, index);
+            return new RequestPiece(index);
+        } else if (id == 7) {
+            short index = dis.readShort();
+            byte[] bytes = new byte[len - 5];
+            dis.read(bytes);
+            log.info("Received piece <len:{}><id:{}><index:{}><data:omitted>", len, id, index);
+            return new SendPiece(index, bytes);
+        } else {
+            log.warn("Received event with id {} which is not yet supported or unknown.", id);
+            throw new NotImplementedException("Received event with id " + id + " which is not yet supported or unknown.");
         }
 
     }

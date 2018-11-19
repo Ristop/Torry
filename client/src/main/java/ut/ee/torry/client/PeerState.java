@@ -21,6 +21,10 @@ public class PeerState implements AutoCloseable {
         networkManager.sendPiece(piece);
     }
 
+    public void requestPiece(int index) throws IOException {
+        networkManager.requestPiece(index);
+    }
+
     @Override
     public void close() throws Exception {
         networkManager.close();

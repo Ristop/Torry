@@ -3,6 +3,7 @@ package ut.ee.torry.client;
 import be.christophedetroyer.torrent.Torrent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ut.ee.torry.client.event.RequestPiece;
 import ut.ee.torry.client.event.SendPiece;
 import ut.ee.torry.client.event.TorrentRequest;
 import ut.ee.torry.common.Peer;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,8 +32,9 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
 
     private final ScheduledExecutorService announceExecutor = Executors.newSingleThreadScheduledExecutor();
     private final ScheduledExecutorService seederExecutor = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService requesterExecutor = Executors.newSingleThreadScheduledExecutor();
     private static final long DEFAULT_ANNOUNCE_INTERVAL = 15L;
-    private static final long DEFAULT_SEEDING_INTERVAL = 300L;
+    private static final long DEFAULT_REQUEST_INTERVAL = 5000L;
 
     private final String peerId;
     private final int port;
@@ -41,6 +44,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     private final PiecesHandler piecesHandler;
     private final Announcer announcer;
     private final BlockingQueue<TorrentRequest> eventQueue;
+    private final BlockingQueue<RequestPiece> seedQueue;
     private final Map<Peer, PeerState> peers = new ConcurrentHashMap<>();
 
     public TorrentTask(
@@ -58,8 +62,10 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         this.announcer = announcer;
         this.eventQueue = eventQueue;
         this.piecesHandler = new PiecesHandler(torrent, downloadDir);
+        seedQueue = new ArrayBlockingQueue<>(10);
         startAnnouncer();
         startSeeder();
+        startRequester();
     }
 
     public void announceStop() {
@@ -86,8 +92,19 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
 
     private void startSeeder() {
         log.info("Running seeder");
-        seederExecutor.scheduleAtFixedRate(
-                this::seed, 5L, DEFAULT_SEEDING_INTERVAL, TimeUnit.MILLISECONDS
+        seederExecutor.execute(() -> {
+            try {
+                seed();
+            } catch (InterruptedException e) {
+                log.error("Unable to seed: ", e);
+            }
+        });
+    }
+
+    private void startRequester() {
+        log.info("Running piece requester");
+        requesterExecutor.scheduleAtFixedRate(
+                this::request, 5L, DEFAULT_REQUEST_INTERVAL, TimeUnit.MILLISECONDS
         );
     }
 
@@ -120,26 +137,54 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         }
     }
 
-    private void seed() {
-        List<Integer> existing = new ArrayList<>(piecesHandler.getExistingPieceIndexes());
-        if (!existing.isEmpty()) {
-            // Right now, just send a random piece to the first peer
-            List<Map.Entry<Peer, PeerState>> entries = new ArrayList<>(peers.entrySet());
-            if (!entries.isEmpty()) {
-                Map.Entry<Peer, PeerState> first = entries.get(0);
-                Peer peer = first.getKey();
-                PeerState peerState = first.getValue();
-                try {
-                    int index = random.nextInt(existing.size());
-                    Piece piece = piecesHandler.getPiece(existing.get(index));
-                    peerState.sendPiece(piece);
-                    log.info("Sent piece with index {} to peer {}.", index, peer);
-                } catch (IOException e) {
-                    peers.remove(peer);
-                    log.error("Failed to seed to peer {}. Closing connection:", peer, e);
+    private void seed() throws InterruptedException {
+        while (!Thread.currentThread().isInterrupted()) {
+            RequestPiece request = seedQueue.take();
+
+            if (piecesHandler.hasPiece(request.getIndex())) {
+                // Right now, just send a piece to the first peer
+                List<Map.Entry<Peer, PeerState>> entries = new ArrayList<>(peers.entrySet());
+                if (!entries.isEmpty()) {
+                    Map.Entry<Peer, PeerState> first = entries.get(0);
+                    Peer peer = first.getKey();
+                    try {
+                        Piece piece = piecesHandler.getPiece(request.getIndex());
+                        sendPiece(peer, piece);
+                        log.info("Sent piece with index {} to peer {}.", request.getIndex(), peer);
+                    } catch (IOException e) {
+                        peers.remove(peer);
+                        log.error("Failed to seed to peer {}. Closing connection:", peer, e);
+                    }
                 }
+            } else {
+                log.warn("Received request for piece with index {} but client does not have it.", request.getIndex());
             }
         }
+    }
+
+    private void sendPiece(Peer peer, Piece piece) throws IOException {
+        peers.get(peer).sendPiece(piece);
+    }
+
+    private void request() {
+        List<Integer> existing = new ArrayList<>(piecesHandler.getNotExistingPieceIndexes());
+        int index = existing.get(random.nextInt(existing.size()));
+
+        List<Map.Entry<Peer, PeerState>> entries = new ArrayList<>(peers.entrySet());
+
+        if (!entries.isEmpty()) {
+            Map.Entry<Peer, PeerState> first = entries.get(0);
+            Peer peer = first.getKey();
+            PeerState peerState = first.getValue();
+            try {
+                peerState.requestPiece(index);
+                log.info("Sent piece request for piece with index {} to peer {}.", index, peer);
+            } catch (IOException e) {
+                peers.remove(peer);
+                log.error("Failed to seed to peer {}. Closing connection:", peer, e);
+            }
+        }
+
     }
 
     @Override
@@ -164,6 +209,8 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                 } catch (IOException e) {
                     log.error("Unable to write received piece: ", e);
                 }
+            } else if (event instanceof RequestPiece) {
+                seedQueue.put((RequestPiece) event);
             }
             // TODO: handle other events
         }

@@ -13,7 +13,6 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
-import javax.activity.InvalidActivityException;
 
 
 public class Piece {
@@ -85,7 +84,7 @@ public class Piece {
                 }
             }
         } else {
-            throw new InvalidActivityException("Creating directory failed");
+            throw new IllegalStateException("Creating directory failed");
         }
     }
 
@@ -118,7 +117,7 @@ public class Piece {
     }
 
     private int writeBytesToFile(String dirPath, TorrentFile torrentFile, int currentByteIndex,
-                                  int pieceStartIndex, byte[] bytesToWrite) throws IOException {
+                                 int pieceStartIndex, byte[] bytesToWrite) throws IOException {
         String fileLocInDir = String.join(File.separator, torrentFile.getFileDirs());
         File file = new File(dirPath + File.separator + fileLocInDir);
         byte[] fileContent = Files.readAllBytes(file.toPath());
@@ -145,10 +144,16 @@ public class Piece {
 
     private byte[] changeByteArray(byte[] initialContent) {
         int pieceBeginningIndex = this.id * this.torrent.getPieceLength().intValue();
-        int pieceEndingIndex = pieceBeginningIndex + this.torrent.getPieceLength().intValue();
+        int pieceEndingIndex = pieceBeginningIndex + this.bytes.length;
 
         byte[] beginBytes = Arrays.copyOfRange(initialContent, 0, pieceBeginningIndex);
-        byte[] endBytes = Arrays.copyOfRange(initialContent, pieceEndingIndex, initialContent.length);
+        byte[] endBytes;
+        if (this.id != torrent.getPieces().size() - 1) {
+            endBytes = Arrays.copyOfRange(initialContent, pieceEndingIndex, initialContent.length);
+        } else { // End piece // TODO : needs refactoring
+            endBytes = new byte[0];
+        }
+
         byte[] firstHalf = ArrayUtils.addAll(beginBytes, this.getBytes());
         return ArrayUtils.addAll(firstHalf, endBytes);
     }
