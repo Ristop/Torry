@@ -33,8 +33,8 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     private final ScheduledExecutorService announceExecutor = Executors.newSingleThreadScheduledExecutor();
     private final ScheduledExecutorService seederExecutor = Executors.newSingleThreadScheduledExecutor();
     private final ScheduledExecutorService requesterExecutor = Executors.newSingleThreadScheduledExecutor();
-    private static final long DEFAULT_ANNOUNCE_INTERVAL = 15L;
-    private static final long DEFAULT_REQUEST_INTERVAL = 5000L;
+    private static final long DEFAULT_ANNOUNCE_INTERVAL = 10L;
+    private static final long DEFAULT_REQUEST_INTERVAL = 200L;
 
     private final String peerId;
     private final int port;
@@ -62,7 +62,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         this.announcer = announcer;
         this.eventQueue = eventQueue;
         this.piecesHandler = new PiecesHandler(torrent, downloadDir);
-        seedQueue = new ArrayBlockingQueue<>(10);
+        seedQueue = new ArrayBlockingQueue<>(32);
         startAnnouncer();
         startSeeder();
         startRequester();
@@ -210,7 +210,10 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                     log.error("Unable to write received piece: ", e);
                 }
             } else if (event instanceof RequestPiece) {
-                seedQueue.put((RequestPiece) event);
+                RequestPiece reqEvent = (RequestPiece) event;
+                if (!seedQueue.contains(reqEvent)) {
+                    seedQueue.put(reqEvent);
+                }
             }
             // TODO: handle other events
         }

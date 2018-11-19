@@ -75,10 +75,10 @@ public class PiecesHandler {
         return getPiece(id).getBytes();
     }
 
-    public void writePiece(int id, byte[] bytes) throws IOException {
+    public synchronized void writePiece(int id, byte[] bytes) throws IOException {
         Piece piece = new Piece(id, this.torrent, bytes);
-        piece.writeBytes(this.downloadFileDir);
         if (piece.isValid()) {
+            piece.writeBytes(this.downloadFileDir);
             this.notExistingPieceIndexes.remove(id);
             this.existingPieceIndexes.add(id);
         } else {
