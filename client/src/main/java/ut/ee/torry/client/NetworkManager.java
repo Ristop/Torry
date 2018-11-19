@@ -31,8 +31,6 @@ public class NetworkManager implements AutoCloseable {
      * <pstrlen><pstr><reserved><info_hash><peer_id>
      */
     public void handShake(Torrent torrent, String peerId) throws IOException {
-        Socket socket = new Socket(ip, port);
-
         DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
         int pstrLen = 19;
 
@@ -53,13 +51,10 @@ public class NetworkManager implements AutoCloseable {
         log.info("Sent handshake request to peer: {}", peerId);
     }
 
-
     /**
      * <len=0013><id=6><index>
      */
     public void requestPiece(int index) throws IOException {
-        Socket socket = new Socket(ip, port);
-
         DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
         int len = 5;
         byte id = 6;
@@ -78,8 +73,6 @@ public class NetworkManager implements AutoCloseable {
      * - <len=0007+X><id=7><index><piece>
      */
     public void sendPiece(Piece piece) throws IOException {
-        Socket socket = new Socket(ip, port);
-
         DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
         int len = 5 + piece.getBytes().length;
         byte id = 7;

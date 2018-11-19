@@ -31,7 +31,7 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask>, AutoC
     private final ScheduledExecutorService announceExecutor = Executors.newSingleThreadScheduledExecutor();
     private final ScheduledExecutorService seederExecutor = Executors.newSingleThreadScheduledExecutor();
     private static final long DEFAULT_ANNOUNCE_INTERVAL = 15L;
-    private static final long DEFAULT_SEEDING_INTERVAL = 15L;
+    private static final long DEFAULT_SEEDING_INTERVAL = 1L;
 
     private final String peerId;
     private final int port;

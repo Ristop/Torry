@@ -48,7 +48,9 @@ public class ClientServerListener implements Runnable {
 
                 executor.execute(() -> {
                     try (DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()))) {
-                        requestQueue.put(parseEventFromReceivedStream(in));
+                        while (!socket.isClosed()) {
+                            requestQueue.put(parseEventFromReceivedStream(in));
+                        }
                     } catch (IOException e) {
                         log.error("Unable to read from socket: ", e);
                     } catch (InterruptedException e) {
