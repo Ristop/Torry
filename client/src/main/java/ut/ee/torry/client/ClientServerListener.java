@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 
 public class ClientServerListener implements Runnable {
 
-    private static final Logger log = LoggerFactory.getLogger(DownloadTorrentTask.class);
+    private static final Logger log = LoggerFactory.getLogger(TorrentTask.class);
 
     private final int port;
 

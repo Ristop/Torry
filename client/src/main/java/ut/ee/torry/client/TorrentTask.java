@@ -21,9 +21,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class DownloadTorrentTask implements Callable<DownloadTorrentTask>, AutoCloseable {
+public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
 
-    private static final Logger log = LoggerFactory.getLogger(DownloadTorrentTask.class);
+    private static final Logger log = LoggerFactory.getLogger(TorrentTask.class);
 
     // temp
     private Random random = new Random();
@@ -31,7 +31,7 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask>, AutoC
     private final ScheduledExecutorService announceExecutor = Executors.newSingleThreadScheduledExecutor();
     private final ScheduledExecutorService seederExecutor = Executors.newSingleThreadScheduledExecutor();
     private static final long DEFAULT_ANNOUNCE_INTERVAL = 15L;
-    private static final long DEFAULT_SEEDING_INTERVAL = 1L;
+    private static final long DEFAULT_SEEDING_INTERVAL = 300L;
 
     private final String peerId;
     private final int port;
@@ -43,7 +43,7 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask>, AutoC
     private final BlockingQueue<TorrentRequest> eventQueue;
     private final Map<Peer, PeerState> peers = new ConcurrentHashMap<>();
 
-    public DownloadTorrentTask(
+    public TorrentTask(
             String peerId,
             int port,
             Torrent torrent,
@@ -87,7 +87,7 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask>, AutoC
     private void startSeeder() {
         log.info("Running seeder");
         seederExecutor.scheduleAtFixedRate(
-                this::seed, 5L, DEFAULT_SEEDING_INTERVAL, TimeUnit.SECONDS
+                this::seed, 5L, DEFAULT_SEEDING_INTERVAL, TimeUnit.MILLISECONDS
         );
     }
 
@@ -135,15 +135,16 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask>, AutoC
                     peerState.sendPiece(piece);
                     log.info("Sent piece with index {} to peer {}.", index, peer);
                 } catch (IOException e) {
-                    log.error("Unable to read and send piece: ", e);
+                    peers.remove(peer);
+                    log.error("Failed to seed to peer {}. Closing connection:", peer, e);
                 }
             }
         }
     }
 
     @Override
-    public DownloadTorrentTask call() throws InterruptedException {
-        log.info("Starting downloading torrent: {}", torrent.getName());
+    public TorrentTask call() throws InterruptedException {
+        log.info("Starting torrent task for {}", torrent.getName());
         log.info("Existing pieces: {}", piecesHandler.getExistingPieceIndexes());
         log.info("Not existing pieces: {}", piecesHandler.getNotExistingPieceIndexes());
         log.info("Torrent pieces count: {}", torrent.getPieces().size());
@@ -177,6 +178,7 @@ public class DownloadTorrentTask implements Callable<DownloadTorrentTask>, AutoC
 
     @Override
     public void close() throws Exception {
+        announceStop();
         for (PeerState peerState : peers.values()) {
             peerState.close();
         }

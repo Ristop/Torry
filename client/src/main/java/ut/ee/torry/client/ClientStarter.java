@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import ut.ee.torry.client.event.TorrentRequest;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -20,6 +21,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 import static ut.ee.torry.client.configuration.ClientConfiguration.DOWNLOADED_FILES_DIR;
 import static ut.ee.torry.client.configuration.ClientConfiguration.PEER_ID;
@@ -41,6 +43,7 @@ public class ClientStarter {
     private final List<Torrent> torrents;
     private final String downloadedFiledDir;
     private final Announcer announcer;
+    private final List<TorrentTask> torrentTasks = new ArrayList<>();
 
     @Autowired
     public ClientStarter(
@@ -56,12 +59,25 @@ public class ClientStarter {
         this.downloadedFiledDir = Objects.requireNonNull(downloadedFiledDir);
         this.announcer = announcer;
         this.executorService = Executors.newFixedThreadPool(DEFAULT_THREAD_POOL_SIZE);
+        Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
     }
 
     @PostConstruct
     private void start() throws InterruptedException, ExecutionException, IOException {
         log.info("Starting client with peer id {}, listening on port {}.", peerId, port);
         downloadTorrents();
+    }
+
+    @PreDestroy
+    private void stop() {
+        log.info("Stopping client with peer id {}.", peerId);
+        for (TorrentTask torrentTask : torrentTasks) {
+            try {
+                torrentTask.close();
+            } catch (Exception e) {
+                log.error("Unable to close torrent task: ", e);
+            }
+        }
     }
 
     /**
@@ -74,21 +90,23 @@ public class ClientStarter {
         BlockingQueue<TorrentRequest> queue = new ArrayBlockingQueue<>(10);
         executorService.execute(new ClientServerListener(port, queue));
 
-        CompletionService<DownloadTorrentTask> completionService = new ExecutorCompletionService<>(this.executorService);
+        CompletionService<TorrentTask> completionService = new ExecutorCompletionService<>(this.executorService);
 
-        // Create a download torrent task for each torrent.
-        // I suspect that this pattern is temporary and will change as the code progresses
+        // Create a task for each torrent.
         for (Torrent torrent : torrents) {
-            completionService.submit(
-                    new DownloadTorrentTask(peerId, port, torrent, downloadedFiledDir, announcer, queue)
-            );
+            torrentTasks.add(new TorrentTask(peerId, port, torrent, downloadedFiledDir, announcer, queue));
+        }
+
+        // Submit task
+        for (TorrentTask torrentTask : torrentTasks) {
+            completionService.submit(torrentTask);
         }
 
         // Start waiting for tasks to finish
         for (int i = 0; i < torrents.size(); i++) {
-            Future<DownloadTorrentTask> future = completionService.take();
+            Future<TorrentTask> future = completionService.take();
 
-            DownloadTorrentTask downloadTorrentTask = future.get();
+            TorrentTask downloadTorrentTask = future.get();
             log.info("{} finished.", downloadTorrentTask);
         }
 

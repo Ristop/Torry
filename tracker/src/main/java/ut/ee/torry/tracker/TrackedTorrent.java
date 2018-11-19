@@ -39,18 +39,22 @@ public class TrackedTorrent {
         return peers.size() - getCompleted();
     }
 
+    public ConcurrentMap<String, Peer> getPeers() {
+        return peers;
+    }
+
     public void update(Peer peer, Event event) {
-        log.info("Torrent[{}]: Updating with peer: {}", infoHash, peer);
-        if (event == Event.COMPLETE || peer.getLeft() == 0) {
-            addPeer(peer);
-        } else if (event == Event.START) {
+        log.info("Torrent[{}]: Updating with peer: {}. Event {}.", infoHash, peer, event);
+        if (event.equals(Event.STOP)) {
+            peers.remove(peer.getId());
+        } else if (event.equals(Event.START)) {
             if (peers.containsKey(peer.getId())) {
                 log.warn("Got event {}, but peer {} is already tracked for torrent {}.", event, peer, this);
             }
             addPeer(peer);
-        } else if (event == Event.STOP) {
-            peers.remove(peer.getId());
-        } else if (event == Event.PERIODIC) {
+        } else if (event.equals(Event.COMPLETE) || peer.getLeft() == 0) {
+            addPeer(peer);
+        } else if (event.equals(Event.PERIODIC)) {
             addPeer(peer);
         } else {
             log.warn("Unknown event {}, skipping update.", event);
@@ -68,7 +72,7 @@ public class TrackedTorrent {
      * @param peer peer for which peers are requested
      * @return all peers excluding @param peer
      */
-    public Set<Peer> getPeers(Peer peer) {
+    private Set<Peer> getPeers(Peer peer) {
         HashMap<String, Peer> allPeers = new HashMap<>(peers);
         allPeers.remove(peer.getId());
         return new HashSet<>(allPeers.values());
