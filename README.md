@@ -24,7 +24,7 @@ In order to build the project you need to clone https://github.com/Ristop/torren
 Requires Java 8
 
 ### Tracker
-* `java -jar tracker/target/torry-tracker-*.jar`
+* `java -jar tracker/target/tracker-*.jar`
 ### Client
 * Set up `application.conf` file. Sample of this file can be found from `client/conf/application.conf.example`.
-* `java -Dconfig.file=/path/to/application.conf -jar client/target/torry-client-*.jar`
+* `java -Dconfig.file=/path/to/application.conf -jar client/target/client-*.jar`
