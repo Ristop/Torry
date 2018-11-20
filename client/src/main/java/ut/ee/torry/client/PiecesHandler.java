@@ -38,11 +38,17 @@ public class PiecesHandler {
     }
 
     public long getBytesDownloaded() {
-        long existingPiecesSize = existingPieceIndexes.size() * pieceSize - 1;
+        if (existingPieceIndexes.isEmpty()) {
+            return 0;
+        }
+
+        long existingPiecesSize = (existingPieceIndexes.size() - 1) * pieceSize;
 
         // If we have last piece
         if (existingPieceIndexes.contains(piecesCount - 1)) {
-            existingPiecesSize += torrent.getTotalSize() - existingPiecesSize;
+            existingPiecesSize += (torrent.getTotalSize() - (pieceSize * (piecesCount - 1)));
+        } else {
+            existingPiecesSize += pieceSize;
         }
         return existingPiecesSize;
     }
