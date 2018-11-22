@@ -1,23 +1,17 @@
 package ut.ee.torry.client;
 
 import be.christophedetroyer.torrent.TorrentParser;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -78,6 +72,11 @@ public class PieceHandlerTest {
         assertEquals(downloaded, downloader.getExistingPieceIndexes());
         assertEquals(needsDownloading, downloader.getNotExistingPieceIndexes());
 
+        sendPieceByPiece(downloader, sender, downloaded, needsDownloading);
+    }
+
+
+    private void sendPieceByPiece(PiecesHandler downloader, PiecesHandler sender, Set<Integer> downloaded, Set<Integer> needsDownloading) throws IOException {
         while (needsDownloading.size() != 0) {
             int randomPieceID = getRandomPieceID(needsDownloading);
             byte[] pieceBytes = sender.getPieceBytes(randomPieceID);
@@ -91,17 +90,6 @@ public class PieceHandlerTest {
 
     @Test
     public void testCorrectnessOfSingleFileDownlad() throws Exception{
-        /*
-        File seeder = new File(seederDownloadFolder);
-        File[] listOfSeederFiles = seeder.listFiles();
-        File downloader = new File(seederDownloadFolder);
-        File[] listOfDownloaderFiles = downloader.listFiles();
-
-        for (File file : listOfFiles) {
-            if (file.isFile()) {
-                System.out.println(file.getName());
-            }
-        }*/
         testSendSingleFilePieceByPiece();
 
         String seededPath = seederDownloadFolder + File.separator + "singleFile.txt";
@@ -116,6 +104,56 @@ public class PieceHandlerTest {
         List<String> seededLines = Files.readAllLines(Paths.get(seededPath));
         List<String> downloadedLines = Files.readAllLines(Paths.get(downloadedPath));
         assertEquals(seededLines, downloadedLines);
+    }
+
+
+
+
+    @Test
+    public void testCorrectnessOfMultiFile1Downlad() throws Exception{
+        testSendMultiFilePieceByPiece(5, multiFile1TorLoc);
+        testCorrectnessOfMUltiFileDownload("multi1");
+    }
+
+
+    @Test
+    public void testCorrectnessOfMultiFile2Downlad() throws Exception{
+        testSendMultiFilePieceByPiece(4, multiFile2TorLoc);
+        testCorrectnessOfMUltiFileDownload("multi2");
+    }
+
+    private void testSendMultiFilePieceByPiece(int pieceCount, String TorrentLocation) throws Exception {
+        PiecesHandler downloader = new PiecesHandler(TorrentParser.parseTorrent(TorrentLocation), downloaderDownloadFolder);
+        PiecesHandler sender = new PiecesHandler(TorrentParser.parseTorrent(TorrentLocation), seederDownloadFolder);
+        Set<Integer> downloaded = nNumbersToSet(0);
+        Set<Integer> needsDownloading = nNumbersToSet(pieceCount);
+        assertEquals(downloaded, downloader.getExistingPieceIndexes());
+        assertEquals(needsDownloading, downloader.getNotExistingPieceIndexes());
+
+        sendPieceByPiece(downloader, sender, downloaded, needsDownloading);
+    }
+
+    private void testCorrectnessOfMUltiFileDownload(String name) throws IOException{
+        String seederFolderPath = seederDownloadFolder + File.separator + name;
+        String downloadFolderPath = downloaderDownloadFolder + File.separator + name;
+        File seederFol = new File(seederFolderPath);
+
+        File seededFile;
+        File downloadedFile;
+        for (File file : Objects.requireNonNull(seederFol.listFiles())) {
+            String seededPath = seederFolderPath + File.separator + file.getName();
+            String downloadedPath = downloadFolderPath + File.separator + file.getName();
+            seededFile = new File(seededPath);
+            downloadedFile = new File(downloadedPath);
+
+            byte[] seederBytes = Files.readAllBytes(seededFile.toPath());
+            byte[] downloaderBytes = Files.readAllBytes(downloadedFile.toPath());
+            assertArrayEquals(seederBytes, downloaderBytes);
+
+            String seededText = new String(seederBytes, StandardCharsets.UTF_8);
+            String downladedText = new String(seederBytes, StandardCharsets.UTF_8);
+            assertEquals(seededText, downladedText);
+        }
     }
 
     private Set<Integer> nNumbersToSet(int n) {

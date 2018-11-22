@@ -177,7 +177,6 @@ public class Piece {
         byte[] bytesToWrite = getBytes();
 
         for (TorrentFile torrentFile : this.torrent.getFileList()) {
-            System.out.println(torrentFile);
             fileEndIndex = currentByteIndexInDir + torrentFile.getFileLength().intValue();
             if (fileEndIndex >= pieceStartIndex) {  // we have to write into that file
                 int writtenBytesCount = writeBytesToFile(dirPath, torrentFile, currentByteIndexInDir, pieceStartIndex,
