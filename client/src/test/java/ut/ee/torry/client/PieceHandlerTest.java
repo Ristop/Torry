@@ -11,7 +11,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,7 +29,7 @@ public class PieceHandlerTest {
     private String multiFile2TorLoc;
 
     @Before
-    public void SetDownloadFolders() {
+    public void setDownloadFolders() {
         this.downloaderDownloadFolder = "src/test/resources/pieces_test_files/downloader/downloads";
         this.seederDownloadFolder = "src/test/resources/pieces_test_files/seeder/downloads";
         this.singleFileTorLoc = "src/test/resources/pieces_test_files/seeder/torrent_files/single.torrent";
@@ -76,7 +80,8 @@ public class PieceHandlerTest {
     }
 
 
-    private void sendPieceByPiece(PiecesHandler downloader, PiecesHandler sender, Set<Integer> downloaded, Set<Integer> needsDownloading) throws IOException {
+    private void sendPieceByPiece(PiecesHandler downloader, PiecesHandler sender, Set<Integer> downloaded,
+                                  Set<Integer> needsDownloading) throws IOException {
         while (needsDownloading.size() != 0) {
             int randomPieceID = getRandomPieceID(needsDownloading);
             byte[] pieceBytes = sender.getPieceBytes(randomPieceID);
@@ -89,7 +94,7 @@ public class PieceHandlerTest {
     }
 
     @Test
-    public void testCorrectnessOfSingleFileDownlad() throws Exception{
+    public void testCorrectnessOfSingleFileDownlad() throws Exception {
         testSendSingleFilePieceByPiece();
 
         String seededPath = seederDownloadFolder + File.separator + "singleFile.txt";
@@ -110,21 +115,21 @@ public class PieceHandlerTest {
 
 
     @Test
-    public void testCorrectnessOfMultiFile1Downlad() throws Exception{
+    public void testCorrectnessOfMultiFile1Downlad() throws Exception {
         testSendMultiFilePieceByPiece(5, multiFile1TorLoc);
         testCorrectnessOfMUltiFileDownload("multi1");
     }
 
 
     @Test
-    public void testCorrectnessOfMultiFile2Downlad() throws Exception{
+    public void testCorrectnessOfMultiFile2Downlad() throws Exception {
         testSendMultiFilePieceByPiece(4, multiFile2TorLoc);
         testCorrectnessOfMUltiFileDownload("multi2");
     }
 
-    private void testSendMultiFilePieceByPiece(int pieceCount, String TorrentLocation) throws Exception {
-        PiecesHandler downloader = new PiecesHandler(TorrentParser.parseTorrent(TorrentLocation), downloaderDownloadFolder);
-        PiecesHandler sender = new PiecesHandler(TorrentParser.parseTorrent(TorrentLocation), seederDownloadFolder);
+    private void testSendMultiFilePieceByPiece(int pieceCount, String torrentLocation) throws Exception {
+        PiecesHandler downloader = new PiecesHandler(TorrentParser.parseTorrent(torrentLocation), downloaderDownloadFolder);
+        PiecesHandler sender = new PiecesHandler(TorrentParser.parseTorrent(torrentLocation), seederDownloadFolder);
         Set<Integer> downloaded = nNumbersToSet(0);
         Set<Integer> needsDownloading = nNumbersToSet(pieceCount);
         assertEquals(downloaded, downloader.getExistingPieceIndexes());
@@ -133,7 +138,7 @@ public class PieceHandlerTest {
         sendPieceByPiece(downloader, sender, downloaded, needsDownloading);
     }
 
-    private void testCorrectnessOfMUltiFileDownload(String name) throws IOException{
+    private void testCorrectnessOfMUltiFileDownload(String name) throws IOException {
         String seederFolderPath = seederDownloadFolder + File.separator + name;
         String downloadFolderPath = downloaderDownloadFolder + File.separator + name;
         File seederFol = new File(seederFolderPath);
@@ -169,10 +174,10 @@ public class PieceHandlerTest {
             int size = list.size();
             int item = new Random().nextInt(size);
             int i = 0;
-            for(Integer obj : list)
-            {
-                if (i == item)
+            for (Integer obj : list) {
+                if (i == item) {
                     return obj;
+                }
                 i++;
             }
         }
@@ -180,7 +185,7 @@ public class PieceHandlerTest {
     }
 
     @After
-    public void DeleteMadeFiles() throws IOException {
+    public void deleteMadeFiles() throws IOException {
         FileUtils.cleanDirectory(new File(downloaderDownloadFolder));
     }
 }
