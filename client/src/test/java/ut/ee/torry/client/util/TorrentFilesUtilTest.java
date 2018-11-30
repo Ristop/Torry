@@ -32,7 +32,7 @@ class TorrentFilesUtilTest {
 
         assertEquals(dirToTest.size(), torrents.size());
 
-        Collections.sort(dirToTest, Comparator.comparing(Torrent::getName));
+        dirToTest.sort(Comparator.comparing(Torrent::getName));
 
         assertEquals(dirToTest.get(0).getName(), torrents.get(0).getName());
         assertEquals(dirToTest.get(0).getInfo_hash(), torrents.get(0).getInfo_hash());

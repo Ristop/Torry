@@ -3,7 +3,6 @@ package ut.ee.torry.client;
 import be.christophedetroyer.torrent.TorrentParser;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -22,55 +21,46 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PieceHandlerTest {
 
-    private String seederDownloadFolder;
-    private String downloaderDownloadFolder;
-    private String singleFileTorLoc;
-    private String multiFile1TorLoc;
-    private String multiFile2TorLoc;
-
-    @BeforeEach
-    public void setDownloadFolders() {
-        this.downloaderDownloadFolder = "src/test/resources/pieces_test_files/downloader/downloads";
-        this.seederDownloadFolder = "src/test/resources/pieces_test_files/seeder/downloads";
-        this.singleFileTorLoc = "src/test/resources/pieces_test_files/seeder/torrent_files/single.torrent";
-        this.multiFile1TorLoc = "src/test/resources/pieces_test_files/seeder/torrent_files/multi1.torrent";
-        this.multiFile2TorLoc = "src/test/resources/pieces_test_files/seeder/torrent_files/multi2.torrent";
-    }
+    private static final String SEEDER_DOWNLOAD_FOLDER = "src/test/resources/pieces_test_files/seeder/downloads";
+    private static final String DOWNLOADER_DOWNLOAD_FOLDER = "src/test/resources/pieces_test_files/downloader/downloads";
+    private static final String SINGLE_FILE_TOR_LOC = "src/test/resources/pieces_test_files/seeder/torrent_files/single.torrent";
+    private static final String MULTI_FILE_1_TOR_LOC = "src/test/resources/pieces_test_files/seeder/torrent_files/multi1.torrent";
+    private static final String MULTI_FILE_2_TOR_LOC = "src/test/resources/pieces_test_files/seeder/torrent_files/multi2.torrent";
 
     @Test
     public void testSeederHasAllPieces() throws Exception {
-        PiecesHandler ph = new PiecesHandler(TorrentParser.parseTorrent(singleFileTorLoc), seederDownloadFolder);
+        PiecesHandler ph = new PiecesHandler(TorrentParser.parseTorrent(SINGLE_FILE_TOR_LOC), SEEDER_DOWNLOAD_FOLDER);
         assertEquals(36, ph.getExistingPieceIndexes().size());
         assertEquals(nNumbersToSet(36), ph.getExistingPieceIndexes());
 
-        ph = new PiecesHandler(TorrentParser.parseTorrent(multiFile1TorLoc), seederDownloadFolder);
+        ph = new PiecesHandler(TorrentParser.parseTorrent(MULTI_FILE_1_TOR_LOC), SEEDER_DOWNLOAD_FOLDER);
         assertEquals(5, ph.getExistingPieceIndexes().size());
         assertEquals(nNumbersToSet(5), ph.getExistingPieceIndexes());
 
-        ph = new PiecesHandler(TorrentParser.parseTorrent(multiFile2TorLoc), seederDownloadFolder);
+        ph = new PiecesHandler(TorrentParser.parseTorrent(MULTI_FILE_2_TOR_LOC), SEEDER_DOWNLOAD_FOLDER);
         assertEquals(4, ph.getExistingPieceIndexes().size());
         assertEquals(nNumbersToSet(4), ph.getExistingPieceIndexes());
     }
 
     @Test
     public void testDownloaderHasNoPieces() throws Exception {
-        PiecesHandler ph = new PiecesHandler(TorrentParser.parseTorrent(singleFileTorLoc), downloaderDownloadFolder);
+        PiecesHandler ph = new PiecesHandler(TorrentParser.parseTorrent(SINGLE_FILE_TOR_LOC), DOWNLOADER_DOWNLOAD_FOLDER);
         assertEquals(0, ph.getExistingPieceIndexes().size());
         assertEquals(nNumbersToSet(0), ph.getExistingPieceIndexes());
 
-        ph = new PiecesHandler(TorrentParser.parseTorrent(multiFile1TorLoc), downloaderDownloadFolder);
+        ph = new PiecesHandler(TorrentParser.parseTorrent(MULTI_FILE_1_TOR_LOC), DOWNLOADER_DOWNLOAD_FOLDER);
         assertEquals(0, ph.getExistingPieceIndexes().size());
         assertEquals(nNumbersToSet(0), ph.getExistingPieceIndexes());
 
-        ph = new PiecesHandler(TorrentParser.parseTorrent(multiFile2TorLoc), downloaderDownloadFolder);
+        ph = new PiecesHandler(TorrentParser.parseTorrent(MULTI_FILE_2_TOR_LOC), DOWNLOADER_DOWNLOAD_FOLDER);
         assertEquals(0, ph.getExistingPieceIndexes().size());
         assertEquals(nNumbersToSet(0), ph.getExistingPieceIndexes());
     }
 
     @Test
     public void testSendSingleFilePieceByPiece() throws Exception {
-        PiecesHandler downloader = new PiecesHandler(TorrentParser.parseTorrent(singleFileTorLoc), downloaderDownloadFolder);
-        PiecesHandler sender = new PiecesHandler(TorrentParser.parseTorrent(singleFileTorLoc), seederDownloadFolder);
+        PiecesHandler downloader = new PiecesHandler(TorrentParser.parseTorrent(SINGLE_FILE_TOR_LOC), DOWNLOADER_DOWNLOAD_FOLDER);
+        PiecesHandler sender = new PiecesHandler(TorrentParser.parseTorrent(SINGLE_FILE_TOR_LOC), SEEDER_DOWNLOAD_FOLDER);
         Set<Integer> downloaded = nNumbersToSet(0);
         Set<Integer> needsDownloading = nNumbersToSet(36);
         assertEquals(downloaded, downloader.getExistingPieceIndexes());
@@ -97,8 +87,8 @@ public class PieceHandlerTest {
     public void testCorrectnessOfSingleFileDownlad() throws Exception {
         testSendSingleFilePieceByPiece();
 
-        String seededPath = seederDownloadFolder + File.separator + "singleFile.txt";
-        String downloadedPath = downloaderDownloadFolder + File.separator + "singleFile.txt";
+        String seededPath = SEEDER_DOWNLOAD_FOLDER + File.separator + "singleFile.txt";
+        String downloadedPath = DOWNLOADER_DOWNLOAD_FOLDER + File.separator + "singleFile.txt";
 
         File seeded = new File(seededPath);
         File downloaded = new File(downloadedPath);
@@ -114,20 +104,20 @@ public class PieceHandlerTest {
 
     @Test
     public void testCorrectnessOfMultiFile1Downlad() throws Exception {
-        testSendMultiFilePieceByPiece(5, multiFile1TorLoc);
+        testSendMultiFilePieceByPiece(5, MULTI_FILE_1_TOR_LOC);
         testCorrectnessOfMUltiFileDownload("multi1");
     }
 
 
     @Test
     public void testCorrectnessOfMultiFile2Downlad() throws Exception {
-        testSendMultiFilePieceByPiece(4, multiFile2TorLoc);
+        testSendMultiFilePieceByPiece(4, MULTI_FILE_2_TOR_LOC);
         testCorrectnessOfMUltiFileDownload("multi2");
     }
 
     private void testSendMultiFilePieceByPiece(int pieceCount, String torrentLocation) throws Exception {
-        PiecesHandler downloader = new PiecesHandler(TorrentParser.parseTorrent(torrentLocation), downloaderDownloadFolder);
-        PiecesHandler sender = new PiecesHandler(TorrentParser.parseTorrent(torrentLocation), seederDownloadFolder);
+        PiecesHandler downloader = new PiecesHandler(TorrentParser.parseTorrent(torrentLocation), DOWNLOADER_DOWNLOAD_FOLDER);
+        PiecesHandler sender = new PiecesHandler(TorrentParser.parseTorrent(torrentLocation), SEEDER_DOWNLOAD_FOLDER);
         Set<Integer> downloaded = nNumbersToSet(0);
         Set<Integer> needsDownloading = nNumbersToSet(pieceCount);
         assertEquals(downloaded, downloader.getExistingPieceIndexes());
@@ -137,8 +127,8 @@ public class PieceHandlerTest {
     }
 
     private void testCorrectnessOfMUltiFileDownload(String name) throws IOException {
-        String seederFolderPath = seederDownloadFolder + File.separator + name;
-        String downloadFolderPath = downloaderDownloadFolder + File.separator + name;
+        String seederFolderPath = SEEDER_DOWNLOAD_FOLDER + File.separator + name;
+        String downloadFolderPath = DOWNLOADER_DOWNLOAD_FOLDER + File.separator + name;
         File seederFol = new File(seederFolderPath);
 
         File seededFile;
@@ -184,7 +174,7 @@ public class PieceHandlerTest {
 
     @AfterEach
     public void deleteMadeFiles() throws IOException {
-        FileUtils.cleanDirectory(new File(downloaderDownloadFolder));
+        FileUtils.cleanDirectory(new File(DOWNLOADER_DOWNLOAD_FOLDER));
     }
 }
 
