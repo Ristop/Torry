@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,6 +31,8 @@ class TorrentFilesUtilTest {
         );
 
         assertEquals(dirToTest.size(), torrents.size());
+
+        Collections.sort(dirToTest, Comparator.comparing(Torrent::getName));
 
         assertEquals(dirToTest.get(0).getName(), torrents.get(0).getName());
         assertEquals(dirToTest.get(0).getInfo_hash(), torrents.get(0).getInfo_hash());
