@@ -7,17 +7,14 @@ import java.io.IOException;
 
 public class PeerState implements AutoCloseable {
 
-    private boolean sentHandshake = false;
-    private boolean receivedHandshake = false;
-
-    private boolean amChoking = true;
-    private boolean interested = false;
-    private boolean peerChoking = true;
-    private boolean peerInterested = false;
+    private final Peer peer;
+    private volatile boolean sentHandshake = false;
+    private volatile boolean receivedHandshake = false;
 
     private final NetworkManager networkManager;
 
     public PeerState(Peer peer) throws IOException {
+        this.peer = peer;
         this.networkManager = new NetworkManager(peer);
     }
 
@@ -38,8 +35,12 @@ public class PeerState implements AutoCloseable {
         return this.sentHandshake && this.receivedHandshake;
     }
 
-    public void recievedHandshake() {
+    public void receivedHandshake() {
         this.receivedHandshake = true;
+    }
+
+    public Peer getPeer() {
+        return peer;
     }
 
     @Override

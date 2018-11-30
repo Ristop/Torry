@@ -13,9 +13,11 @@ import ut.ee.torry.common.TrackerResponse;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -46,7 +48,8 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     private final Announcer announcer;
     private final BlockingQueue<TorryRequest> eventQueue;
     private final BlockingQueue<RequestPiece> seedQueue;
-    private final Map<Peer, PeerState> peers = new ConcurrentHashMap<>();
+    private final Map<String, PeerState> peers = new ConcurrentHashMap<>();
+    private final Set<String> queuedHandshakes = new HashSet<>();
 
     public TorrentTask(
             String peerId,
@@ -127,13 +130,19 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
 
         // Save peers from response and send handshake
         for (Peer peer : response.getPeers()) {
-            if (!peers.containsKey(peer)) {
-                try {
-                    PeerState peerState = new PeerState(peer);
-                    peerState.handShake(torrent, peerId);
-                    peers.put(peer, peerState);
-                } catch (IOException e) {
-                    log.error("Unable to add tracked peer: ", e);
+            synchronized (peers) {
+                if (!peers.containsKey(peer.getId())) {
+                    try {
+                        PeerState peerState = new PeerState(peer);
+                        peerState.handShake(torrent, peerId);
+                        if (queuedHandshakes.contains(peer.getId())) {
+                            peerState.receivedHandshake();
+                            queuedHandshakes.remove(peer.getId());
+                        }
+                        peers.put(peer.getId(), peerState);
+                    } catch (IOException e) {
+                        log.error("Unable to add tracked peer: ", e);
+                    }
                 }
             }
         }
@@ -145,18 +154,19 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
 
             if (piecesHandler.hasPiece(request.getIndex())) {
                 // Right now, just send a piece to the first peer
-                List<Map.Entry<Peer, PeerState>> entries = new ArrayList<>(peers.entrySet());
-                if (!entries.isEmpty()) {
-                    Map.Entry<Peer, PeerState> first = entries.get(0);
-                    Peer peer = first.getKey();
-                    PeerState state = first.getValue();
-                    if (state.handshakeDone()) {
+                ArrayList<PeerState> peerStates = new ArrayList<>(peers.values());
+
+                if (!peerStates.isEmpty()) {
+                    PeerState peerState = peerStates.get(0);
+
+                    if (peerState.handshakeDone()) {
+                        Peer peer = peerState.getPeer();
                         try {
                             Piece piece = piecesHandler.getPiece(request.getIndex());
                             sendPiece(peer, piece);
                             log.info("Sent piece with index {} to peer {}.", request.getIndex(), peer);
                         } catch (IOException e) {
-                            peers.remove(peer);
+                            peers.remove(peer.getId());
                             log.error("Failed to seed to peer {}. Closing connection:", peer, e);
                         }
                     }
@@ -168,25 +178,24 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     }
 
     private void sendPiece(Peer peer, Piece piece) throws IOException {
-        peers.get(peer).sendPiece(piece);
+        peers.get(peer.getId()).sendPiece(piece);
     }
 
     private void request() {
         List<Integer> existing = new ArrayList<>(piecesHandler.getNotExistingPieceIndexes());
         int index = existing.get(random.nextInt(existing.size()));
 
-        List<Map.Entry<Peer, PeerState>> entries = new ArrayList<>(peers.entrySet());
+        ArrayList<PeerState> peerStates = new ArrayList<>(peers.values());
 
-        if (!entries.isEmpty()) {
-            Map.Entry<Peer, PeerState> first = entries.get(0);
-            Peer peer = first.getKey();
-            PeerState peerState = first.getValue();
+        if (!peerStates.isEmpty()) {
+            PeerState peerState = peerStates.get(0);
             if (peerState.handshakeDone()) {
+                Peer peer = peerState.getPeer();
                 try {
                     peerState.requestPiece(index);
                     log.info("Sent piece request for piece with index {} to peer {}.", index, peer);
                 } catch (IOException e) {
-                    peers.remove(peer);
+                    peers.remove(peer.getId());
                     log.error("Failed to seed to peer {}. Closing connection:", peer, e);
                 }
             }
@@ -222,16 +231,14 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                     seedQueue.put(reqEvent);
                 }
             } else if (event instanceof Handshake) {
-                Handshake reqEvent = (Handshake) event;
-                for (Map.Entry<Peer, PeerState> entry : peers.entrySet()) {
-                    if (entry.getKey().getId().equals(reqEvent.getPeerId())) {
-                        log.info("Received handshake for peer {}.", peerId);
-                        PeerState value = entry.getValue();
-                        value.recievedHandshake();
-                        break;
+                Handshake handshake = (Handshake) event;
+                synchronized (peers) {
+                    if (peers.containsKey(handshake.getPeerId())) {
+                        peers.get(handshake.getPeerId()).receivedHandshake();
+                    } else {
+                        queuedHandshakes.add(handshake.getPeerId());
                     }
                 }
-
 
             }
             // TODO: handle other events

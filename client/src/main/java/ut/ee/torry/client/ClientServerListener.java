@@ -71,7 +71,7 @@ public class ClientServerListener implements Runnable {
         byte pstrLen = dis.readByte();
 
         byte[] pstrBytes = new byte[pstrLen];
-        dis.read(pstrBytes);
+        dis.readFully(pstrBytes);
         String pstr = new String(pstrBytes);
 
         // Reserved 8 bits
@@ -80,11 +80,11 @@ public class ClientServerListener implements Runnable {
         }
 
         byte[] torrentHashBytes = new byte[40];
-        dis.read(torrentHashBytes);
+        dis.readFully(torrentHashBytes);
         String torrentHash = new String(torrentHashBytes);
 
         byte[] peerIdBytes = new byte[20];
-        dis.read(peerIdBytes);
+        dis.readFully(peerIdBytes);
         String peerId = new String(peerIdBytes);
 
         log.info("Received handshake from client {} for torrent {} with protocol {}", peerId, torrentHash, pstr);
@@ -92,8 +92,6 @@ public class ClientServerListener implements Runnable {
     }
 
     private TorryRequest parseLengthPrefixedMessage(DataInputStream dis) throws IOException {
-        log.info("Reading info from stream");
-
         int len = dis.readInt();
         byte id = dis.readByte();
 
@@ -104,8 +102,8 @@ public class ClientServerListener implements Runnable {
         } else if (id == 7) {
             short index = dis.readShort();
             byte[] bytes = new byte[len - 5];
-            dis.read(bytes);
-            log.info("Received piece <len:{}><id:{}><index:{}><data:omitted>", len, id, index);
+            dis.readFully(bytes);
+            log.info("Received piece <len:{}><id:{}><index:{}><data:<omitted>>", len, id, index);
             return new SendPiece(index, bytes);
         } else {
             log.warn("Received event with id {} which is not yet supported or unknown.", id);

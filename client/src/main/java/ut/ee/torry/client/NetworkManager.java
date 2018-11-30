@@ -42,7 +42,7 @@ public class NetworkManager implements AutoCloseable {
             dos.writeByte(0);
         }
 
-        // 20-bytes
+        // 40-bytes
         dos.writeBytes(torrent.getInfo_hash());
 
         // 20-bytes
@@ -84,8 +84,9 @@ public class NetworkManager implements AutoCloseable {
         dos.writeByte(id);
         dos.writeShort(index);
         dos.write(piece.getBytes());
+        dos.flush();
 
-        log.info("Sent send piece request <len:{}><id:{}><index:{}><data:omitted>", len, id, index);
+        log.info("Sent send piece request <len:{}><id:{}><index:{}><data:<omitted>>", len, id, index);
     }
 
     @Override
