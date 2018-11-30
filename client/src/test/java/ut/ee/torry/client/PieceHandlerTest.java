@@ -2,9 +2,9 @@ package ut.ee.torry.client;
 
 import be.christophedetroyer.torrent.TorrentParser;
 import org.apache.commons.io.FileUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,7 +28,7 @@ public class PieceHandlerTest {
     private String multiFile1TorLoc;
     private String multiFile2TorLoc;
 
-    @Before
+    @BeforeEach
     public void setDownloadFolders() {
         this.downloaderDownloadFolder = "src/test/resources/pieces_test_files/downloader/downloads";
         this.seederDownloadFolder = "src/test/resources/pieces_test_files/seeder/downloads";
@@ -112,8 +112,6 @@ public class PieceHandlerTest {
     }
 
 
-
-
     @Test
     public void testCorrectnessOfMultiFile1Downlad() throws Exception {
         testSendMultiFilePieceByPiece(5, multiFile1TorLoc);
@@ -184,7 +182,7 @@ public class PieceHandlerTest {
         return -1;
     }
 
-    @After
+    @AfterEach
     public void deleteMadeFiles() throws IOException {
         FileUtils.cleanDirectory(new File(downloaderDownloadFolder));
     }
