@@ -1,6 +1,6 @@
 package ut.ee.torry.client.event;
 
-public class RequestPiece implements TorrentRequest {
+public class RequestPiece implements TorryRequest {
 
     private final short index;
 

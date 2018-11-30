@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-import ut.ee.torry.client.event.TorrentRequest;
+import ut.ee.torry.client.event.TorryRequest;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -87,7 +87,7 @@ public class ClientStarter {
 
         // Start listener
         ExecutorService executorService = Executors.newSingleThreadExecutor();
-        BlockingQueue<TorrentRequest> queue = new ArrayBlockingQueue<>(10);
+        BlockingQueue<TorryRequest> queue = new ArrayBlockingQueue<>(10);
         executorService.execute(new ClientServerListener(port, queue));
 
         CompletionService<TorrentTask> completionService = new ExecutorCompletionService<>(this.executorService);

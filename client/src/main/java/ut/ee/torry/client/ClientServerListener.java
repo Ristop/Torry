@@ -3,9 +3,10 @@ package ut.ee.torry.client;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ut.ee.torry.client.event.Handshake;
 import ut.ee.torry.client.event.RequestPiece;
 import ut.ee.torry.client.event.SendPiece;
-import ut.ee.torry.client.event.TorrentRequest;
+import ut.ee.torry.client.event.TorryRequest;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -22,9 +23,9 @@ public class ClientServerListener implements Runnable {
 
     private final int port;
 
-    private final BlockingQueue<TorrentRequest> requestQueue;
+    private final BlockingQueue<TorryRequest> requestQueue;
 
-    public ClientServerListener(int port, BlockingQueue<TorrentRequest> requestQueue) {
+    public ClientServerListener(int port, BlockingQueue<TorryRequest> requestQueue) {
         this.port = port;
         this.requestQueue = requestQueue;
     }
@@ -49,8 +50,9 @@ public class ClientServerListener implements Runnable {
 
                 executor.execute(() -> {
                     try (DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()))) {
+                        requestQueue.put(parseHandshake(in));
                         while (!socket.isClosed()) {
-                            requestQueue.put(parseEventFromReceivedStream(in));
+                            requestQueue.put(parseLengthPrefixedMessage(in));
                         }
                     } catch (IOException e) {
                         log.error("Unable to read from socket: ", e);
@@ -65,7 +67,31 @@ public class ClientServerListener implements Runnable {
         }
     }
 
-    private TorrentRequest parseEventFromReceivedStream(DataInputStream dis) throws IOException {
+    private TorryRequest parseHandshake(DataInputStream dis) throws IOException {
+        byte pstrLen = dis.readByte();
+
+        byte[] pstrBytes = new byte[pstrLen];
+        dis.read(pstrBytes);
+        String pstr = new String(pstrBytes);
+
+        // Reserved 8 bits
+        for (int i = 0; i < 8; i++) {
+            byte b = dis.readByte();
+        }
+
+        byte[] torrentHashBytes = new byte[40];
+        dis.read(torrentHashBytes);
+        String torrentHash = new String(torrentHashBytes);
+
+        byte[] peerIdBytes = new byte[20];
+        dis.read(peerIdBytes);
+        String peerId = new String(peerIdBytes);
+
+        log.info("Received handshake from client {} for torrent {} with protocol {}", peerId, torrentHash, pstr);
+        return new Handshake(peerId, torrentHash, pstr);
+    }
+
+    private TorryRequest parseLengthPrefixedMessage(DataInputStream dis) throws IOException {
         log.info("Reading info from stream");
 
         int len = dis.readInt();

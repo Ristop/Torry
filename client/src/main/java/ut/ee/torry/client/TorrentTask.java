@@ -3,9 +3,10 @@ package ut.ee.torry.client;
 import be.christophedetroyer.torrent.Torrent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ut.ee.torry.client.event.Handshake;
 import ut.ee.torry.client.event.RequestPiece;
 import ut.ee.torry.client.event.SendPiece;
-import ut.ee.torry.client.event.TorrentRequest;
+import ut.ee.torry.client.event.TorryRequest;
 import ut.ee.torry.common.Peer;
 import ut.ee.torry.common.TrackerResponse;
 
@@ -43,7 +44,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     private final String downloadDir;
     private final PiecesHandler piecesHandler;
     private final Announcer announcer;
-    private final BlockingQueue<TorrentRequest> eventQueue;
+    private final BlockingQueue<TorryRequest> eventQueue;
     private final BlockingQueue<RequestPiece> seedQueue;
     private final Map<Peer, PeerState> peers = new ConcurrentHashMap<>();
 
@@ -53,7 +54,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
             Torrent torrent,
             String downloadDir,
             Announcer announcer,
-            BlockingQueue<TorrentRequest> eventQueue
+            BlockingQueue<TorryRequest> eventQueue
     ) throws IOException {
         this.peerId = peerId;
         this.port = port;
@@ -124,11 +125,12 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
 
         log.info("Announce response: {}", response);
 
-        // Save peers from response
+        // Save peers from response and send handshake
         for (Peer peer : response.getPeers()) {
             if (!peers.containsKey(peer)) {
                 try {
                     PeerState peerState = new PeerState(peer);
+                    peerState.handShake(torrent, peerId);
                     peers.put(peer, peerState);
                 } catch (IOException e) {
                     log.error("Unable to add tracked peer: ", e);
@@ -147,13 +149,16 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                 if (!entries.isEmpty()) {
                     Map.Entry<Peer, PeerState> first = entries.get(0);
                     Peer peer = first.getKey();
-                    try {
-                        Piece piece = piecesHandler.getPiece(request.getIndex());
-                        sendPiece(peer, piece);
-                        log.info("Sent piece with index {} to peer {}.", request.getIndex(), peer);
-                    } catch (IOException e) {
-                        peers.remove(peer);
-                        log.error("Failed to seed to peer {}. Closing connection:", peer, e);
+                    PeerState state = first.getValue();
+                    if (state.handshakeDone()) {
+                        try {
+                            Piece piece = piecesHandler.getPiece(request.getIndex());
+                            sendPiece(peer, piece);
+                            log.info("Sent piece with index {} to peer {}.", request.getIndex(), peer);
+                        } catch (IOException e) {
+                            peers.remove(peer);
+                            log.error("Failed to seed to peer {}. Closing connection:", peer, e);
+                        }
                     }
                 }
             } else {
@@ -176,12 +181,14 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
             Map.Entry<Peer, PeerState> first = entries.get(0);
             Peer peer = first.getKey();
             PeerState peerState = first.getValue();
-            try {
-                peerState.requestPiece(index);
-                log.info("Sent piece request for piece with index {} to peer {}.", index, peer);
-            } catch (IOException e) {
-                peers.remove(peer);
-                log.error("Failed to seed to peer {}. Closing connection:", peer, e);
+            if (peerState.handshakeDone()) {
+                try {
+                    peerState.requestPiece(index);
+                    log.info("Sent piece request for piece with index {} to peer {}.", index, peer);
+                } catch (IOException e) {
+                    peers.remove(peer);
+                    log.error("Failed to seed to peer {}. Closing connection:", peer, e);
+                }
             }
         }
 
@@ -195,7 +202,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         log.info("Torrent pieces count: {}", torrent.getPieces().size());
 
         while (!Thread.currentThread().isInterrupted()) {
-            TorrentRequest event = eventQueue.take();
+            TorryRequest event = eventQueue.take();
             log.info("Received event: {}", event);
 
             if (event instanceof SendPiece) {
@@ -214,6 +221,18 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                 if (!seedQueue.contains(reqEvent)) {
                     seedQueue.put(reqEvent);
                 }
+            } else if (event instanceof Handshake) {
+                Handshake reqEvent = (Handshake) event;
+                for (Map.Entry<Peer, PeerState> entry : peers.entrySet()) {
+                    if (entry.getKey().getId().equals(reqEvent.getPeerId())) {
+                        log.info("Received handshake for peer {}.", peerId);
+                        PeerState value = entry.getValue();
+                        value.recievedHandshake();
+                        break;
+                    }
+                }
+
+
             }
             // TODO: handle other events
         }

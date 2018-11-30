@@ -32,7 +32,7 @@ public class NetworkManager implements AutoCloseable {
      */
     public void handShake(Torrent torrent, String peerId) throws IOException {
         DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-        int pstrLen = 19;
+        byte pstrLen = 19;
 
         dos.writeByte(pstrLen);
         dos.writeBytes(PSTR);
@@ -47,6 +47,7 @@ public class NetworkManager implements AutoCloseable {
 
         // 20-bytes
         dos.writeBytes(peerId);
+        dos.flush();
 
         log.info("Sent handshake request to peer: {}", peerId);
     }
