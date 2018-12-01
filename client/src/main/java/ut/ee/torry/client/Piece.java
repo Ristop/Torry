@@ -21,12 +21,14 @@ public class Piece {
     private final byte[] bytes;
     private final Torrent torrent;
     private final String hash;
+    private final File file;
 
-    public Piece(int id, Torrent torrent, byte[] bytes) {
+    public Piece(int id, Torrent torrent, byte[] bytes, String clientPath) {
         this.id = id;
         this.bytes = bytes;
         this.torrent = torrent;
         this.hash = torrent.getPieces().get(id);
+        this.file = new File(clientPath + File.separator + this.torrent.getName());
     }
 
     public int getId() {
@@ -42,44 +44,42 @@ public class Piece {
         return hash.equals(calculatedHash);
     }
 
-    public void writeBytes(String clientPath) throws IOException {
+    public void writeBytes(byte[] existingBytes) throws IOException {
         if (torrent.isSingleFileTorrent()) {
             try {
-                writeBytesToFile(clientPath + File.separator + this.torrent.getName());
+                writeBytesToFile(existingBytes);
             } catch (IOException e) {
-                createFile(clientPath + File.separator + this.torrent.getName());
-                writeBytesToFile(clientPath + File.separator + this.torrent.getName());
+                createFile();
+                writeBytesToFile(existingBytes);
             }
         } else {
             try {
-                writeBytesToDir(clientPath + File.separator + this.torrent.getName());
+                writeBytesToDir();
             } catch (IOException e) {
-                createDirectory(clientPath + File.separator + this.torrent.getName());
-                writeBytesToDir(clientPath + File.separator + this.torrent.getName());
+                createDirectory();
+                writeBytesToDir();
             }
         }
     }
 
-    private void createFile(String path) throws IOException {
-        File file = new File(path);
+    private void createFile() throws IOException {
         byte[] defaultContent = new byte[torrent.getTotalSize().intValue()];
         try (OutputStream os = new FileOutputStream(file)) {
             os.write(defaultContent);
         }
     }
 
-    private void createDirectory(String dirLoc) throws IOException {
-        File file = new File(dirLoc);
-        boolean success = file.mkdir();
+    private void createDirectory() throws IOException {
+        boolean success = this.file.mkdir();
         if (success) {
             for (TorrentFile torrentFile : this.torrent.getFileList()) {
                 if (torrentFile.getFileDirs().size() > 1) {
-                    createSubFoldersIFNeeded(dirLoc, torrentFile.getFileDirs());
+                    createSubFoldersIFNeeded(this.file.getPath(), torrentFile.getFileDirs());
                 }
                 String fileLocInDir = String.join(File.separator, torrentFile.getFileDirs());
-                file = new File(dirLoc + File.separator + fileLocInDir);
+                File subFile = new File(this.file.getPath() + File.separator + fileLocInDir);
                 byte[] defaultContent = new byte[torrentFile.getFileLength().intValue()];
-                try (OutputStream os = new FileOutputStream(file)) {
+                try (OutputStream os = new FileOutputStream(subFile)) {
                     os.write(defaultContent);
                 }
             }
@@ -106,20 +106,22 @@ public class Piece {
         }
     }
 
-    private void writeBytesToFile(String filePath) throws IOException {
-        File file = new File(filePath);
-        byte[] fileContent = Files.readAllBytes(file.toPath());
-        byte[] newContent = changeByteArray(fileContent);
+    private void writeBytesToFile(byte[] existingBytes) throws IOException {
+        changeByteArray(existingBytes);
 
         try (OutputStream os = new FileOutputStream(file)) {
-            os.write(newContent);
+            os.write(existingBytes);
         }
     }
 
-    private int writeBytesToFile(String dirPath, TorrentFile torrentFile, int currentByteIndex,
-                                 int pieceStartIndex, byte[] bytesToWrite) throws IOException {
+    private int writeBytesToFile(
+            TorrentFile torrentFile,
+            int currentByteIndex,
+            int pieceStartIndex,
+            byte[] bytesToWrite
+    ) throws IOException {
         String fileLocInDir = String.join(File.separator, torrentFile.getFileDirs());
-        File file = new File(dirPath + File.separator + fileLocInDir);
+        File file = new File(this.file.getPath() + File.separator + fileLocInDir);
         byte[] fileContent = Files.readAllBytes(file.toPath());
         int nrOfOldStartBytes = Math.max(pieceStartIndex - currentByteIndex, 0);
 
@@ -142,20 +144,12 @@ public class Piece {
         return bytesToWrite.length;
     }
 
-    private byte[] changeByteArray(byte[] initialContent) {
-        int pieceBeginningIndex = this.id * this.torrent.getPieceLength().intValue();
-        int pieceEndingIndex = pieceBeginningIndex + this.bytes.length;
+    private void changeByteArray(byte[] initialContent) {
+        int begin = this.id * this.torrent.getPieceLength().intValue();
 
-        byte[] beginBytes = Arrays.copyOfRange(initialContent, 0, pieceBeginningIndex);
-        byte[] endBytes;
-        if (this.id != torrent.getPieces().size() - 1) {
-            endBytes = Arrays.copyOfRange(initialContent, pieceEndingIndex, initialContent.length);
-        } else { // End piece // TODO : needs refactoring
-            endBytes = new byte[0];
+        for (int i = 0; i < this.getBytes().length; i++) {
+            initialContent[i + begin] = this.getBytes()[i];
         }
-
-        byte[] firstHalf = ArrayUtils.addAll(beginBytes, this.getBytes());
-        return ArrayUtils.addAll(firstHalf, endBytes);
     }
 
     private byte[] changeByteArray(byte[] initialContent, int nrOfOldStartBytes, byte[] bytesToWrite, int nrOfOldEndBytes) {
@@ -169,7 +163,7 @@ public class Piece {
         }
     }
 
-    private void writeBytesToDir(String dirPath) throws IOException {
+    private void writeBytesToDir() throws IOException {
         int pieceStartIndex = this.id * this.torrent.getPieceLength().intValue();
 
         int currentByteIndexInDir = 0;
@@ -179,8 +173,8 @@ public class Piece {
         for (TorrentFile torrentFile : this.torrent.getFileList()) {
             fileEndIndex = currentByteIndexInDir + torrentFile.getFileLength().intValue();
             if (fileEndIndex >= pieceStartIndex) {  // we have to write into that file
-                int writtenBytesCount = writeBytesToFile(dirPath, torrentFile, currentByteIndexInDir, pieceStartIndex,
-                        bytesToWrite);  // here w have to chekc if we write all bytes to file or not
+                // here w have to check if we write all bytes to file or not
+                int writtenBytesCount = writeBytesToFile(torrentFile, currentByteIndexInDir, pieceStartIndex, bytesToWrite);
                 if (writtenBytesCount >= bytesToWrite.length) { // all needed bytes are written
                     return;
                 } else {
