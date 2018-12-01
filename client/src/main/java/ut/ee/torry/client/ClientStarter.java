@@ -10,7 +10,9 @@ import ut.ee.torry.client.event.TorryRequest;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -87,15 +89,19 @@ public class ClientStarter {
 
         // Start listener
         ExecutorService executorService = Executors.newSingleThreadExecutor();
-        BlockingQueue<TorryRequest> queue = new ArrayBlockingQueue<>(10);
-        executorService.execute(new ClientServerListener(port, queue));
 
         CompletionService<TorrentTask> completionService = new ExecutorCompletionService<>(this.executorService);
 
+        Map<String, BlockingQueue<TorryRequest>> queues = new HashMap<>();
+
         // Create a task for each torrent.
         for (Torrent torrent : torrents) {
+            BlockingQueue<TorryRequest> queue = new ArrayBlockingQueue<>(10);
+            queues.put(torrent.getInfo_hash(), queue);
             torrentTasks.add(new TorrentTask(peerId, port, torrent, downloadedFiledDir, announcer, queue));
         }
+
+        executorService.execute(new ClientServerListener(port, queues));
 
         // Submit task
         for (TorrentTask torrentTask : torrentTasks) {

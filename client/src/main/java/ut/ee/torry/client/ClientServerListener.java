@@ -13,6 +13,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,11 +24,11 @@ public class ClientServerListener implements Runnable {
 
     private final int port;
 
-    private final BlockingQueue<TorryRequest> requestQueue;
+    private final Map<String, BlockingQueue<TorryRequest>> requestQueues;
 
-    public ClientServerListener(int port, BlockingQueue<TorryRequest> requestQueue) {
+    public ClientServerListener(int port, Map<String, BlockingQueue<TorryRequest>> requestQueues) {
         this.port = port;
-        this.requestQueue = requestQueue;
+        this.requestQueues = requestQueues;
     }
 
     @Override
@@ -50,9 +51,13 @@ public class ClientServerListener implements Runnable {
 
                 executor.execute(() -> {
                     try (DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()))) {
-                        requestQueue.put(parseHandshake(in));
+                        Handshake handshake = parseHandshake(in);
+
+                        BlockingQueue<TorryRequest> requestQueue = requestQueues.get(handshake.getTorrentHash());
+
+                        requestQueue.put(handshake);
                         while (!socket.isClosed()) {
-                            requestQueue.put(parseLengthPrefixedMessage(in));
+                            requestQueue.put(parseLengthPrefixedMessage(in, handshake.getPeerId()));
                         }
                     } catch (IOException e) {
                         log.error("Unable to read from socket: ", e);
@@ -67,7 +72,7 @@ public class ClientServerListener implements Runnable {
         }
     }
 
-    private TorryRequest parseHandshake(DataInputStream dis) throws IOException {
+    private Handshake parseHandshake(DataInputStream dis) throws IOException {
         byte pstrLen = dis.readByte();
 
         byte[] pstrBytes = new byte[pstrLen];
@@ -91,14 +96,14 @@ public class ClientServerListener implements Runnable {
         return new Handshake(peerId, torrentHash, pstr);
     }
 
-    private TorryRequest parseLengthPrefixedMessage(DataInputStream dis) throws IOException {
+    private TorryRequest parseLengthPrefixedMessage(DataInputStream dis, String peerId) throws IOException {
         int len = dis.readInt();
         byte id = dis.readByte();
 
         if (id == 6) {
             short index = dis.readShort();
             log.info("Received request piece <len:{}><id:{}><index:{}>", len, id, index);
-            return new RequestPiece(index);
+            return new RequestPiece(index, peerId);
         } else if (id == 7) {
             short index = dis.readShort();
             byte[] bytes = new byte[len - 5];

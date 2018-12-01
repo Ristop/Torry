@@ -152,33 +152,30 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         while (!Thread.currentThread().isInterrupted()) {
             RequestPiece request = seedQueue.take();
 
+            // Do we even have the piece?
             if (piecesHandler.hasPiece(request.getIndex())) {
-                // Right now, just send a piece to the first peer
-                ArrayList<PeerState> peerStates = new ArrayList<>(peers.values());
-
-                if (!peerStates.isEmpty()) {
-                    PeerState peerState = peerStates.get(0);
-
+                // Do we know about the peer that wants the piece?
+                if (peers.containsKey(request.getPeerId())) {
+                    PeerState peerState = peers.get(request.getPeerId());
+                    // Is the handshake done?
                     if (peerState.handshakeDone()) {
                         Peer peer = peerState.getPeer();
                         try {
                             Piece piece = piecesHandler.getPiece(request.getIndex());
-                            sendPiece(peer, piece);
+                            peerState.sendPiece(piece);
                             log.info("Sent piece with index {} to peer {}.", request.getIndex(), peer);
                         } catch (IOException e) {
                             peers.remove(peer.getId());
                             log.error("Failed to seed to peer {}. Closing connection:", peer, e);
                         }
                     }
+                } else {
+                    log.warn("Received request for piece, but peer {} is unknown.", request.getPeerId());
                 }
             } else {
                 log.warn("Received request for piece with index {} but client does not have it.", request.getIndex());
             }
         }
-    }
-
-    private void sendPiece(Peer peer, Piece piece) throws IOException {
-        peers.get(peer.getId()).sendPiece(piece);
     }
 
     private void request() {
@@ -187,8 +184,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
 
         ArrayList<PeerState> peerStates = new ArrayList<>(peers.values());
 
-        if (!peerStates.isEmpty()) {
-            PeerState peerState = peerStates.get(0);
+        for (PeerState peerState : peerStates) {
             if (peerState.handshakeDone()) {
                 Peer peer = peerState.getPeer();
                 try {
