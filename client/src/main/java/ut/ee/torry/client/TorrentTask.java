@@ -3,6 +3,7 @@ package ut.ee.torry.client;
 import be.christophedetroyer.torrent.Torrent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ut.ee.torry.client.event.BitField;
 import ut.ee.torry.client.event.Handshake;
 import ut.ee.torry.client.event.RequestPiece;
 import ut.ee.torry.client.event.SendPiece;
@@ -200,7 +201,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     }
 
     @Override
-    public TorrentTask call() throws InterruptedException {
+    public TorrentTask call() throws InterruptedException, IOException {
         log.info("Starting torrent task for {}", torrent.getName());
         log.info("Existing pieces: {}", piecesHandler.getExistingPieceIndexes());
         log.info("Not existing pieces: {}", piecesHandler.getNotExistingPieceIndexes());
@@ -230,12 +231,16 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                 Handshake handshake = (Handshake) event;
                 synchronized (peers) {
                     if (peers.containsKey(handshake.getPeerId())) {
-                        peers.get(handshake.getPeerId()).receivedHandshake();
+                        PeerState peerState = peers.get(handshake.getPeerId());
+                        peerState.receivedHandshake();
+                        peerState.sendBitField(piecesHandler.getBitField());
                     } else {
                         queuedHandshakes.add(handshake.getPeerId());
                     }
                 }
-
+            } else if (event instanceof BitField) {
+                BitField bitField = (BitField) event;
+                peers.get(bitField.getPeerId()).setBitField(bitField.getBitField());
             }
             // TODO: handle other events
         }

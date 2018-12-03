@@ -53,6 +53,27 @@ public class NetworkManager implements AutoCloseable {
     }
 
     /**
+     * <len=001+X><id=5><bitfield>
+     */
+    public void bitField(boolean[] availablePieces) throws IOException {
+        DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+
+        int len = 1 + availablePieces.length;
+        byte id = 5;
+
+        dos.writeInt(len);
+        dos.writeByte(id);
+
+        for (boolean availablePiece : availablePieces) {
+            dos.writeBoolean(availablePiece);
+        }
+
+        dos.flush();
+
+        log.info("Sent bitField <len:{}><id:{}><bitField:<omitted>>", len, id);
+    }
+
+    /**
      * <len=005><id=6><index>
      */
     public void requestPiece(int index) throws IOException {

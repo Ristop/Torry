@@ -28,8 +28,7 @@ public class PiecesHandler {
 
     private final byte[] existingBytes;
 
-    private final Set<Integer> existingPieceIndexes;
-    private final Set<Integer> notExistingPieceIndexes;
+    private final boolean[] bitField;
 
     public PiecesHandler(Torrent torrent, String downloadFileDirPath) throws IOException {
         this.torrent = Objects.requireNonNull(torrent);
@@ -58,40 +57,29 @@ public class PiecesHandler {
             this.existingBytes = new byte[numOfBytes];
         }
 
-        this.existingPieceIndexes = findAvailablePieceIndexes();
-        this.notExistingPieceIndexes = findNotAvailablePieceIndexes(existingPieceIndexes);
+        this.bitField = findBitField();
     }
 
     public long getBytesDownloaded() {
-        if (existingPieceIndexes.isEmpty()) {
-            return 0;
-        }
-
-        long existingPiecesSize = (existingPieceIndexes.size() - 1) * pieceSize;
-
-        // If we have last piece
-        if (existingPieceIndexes.contains(piecesCount - 1)) {
-            existingPiecesSize += (torrent.getTotalSize() - (pieceSize * (piecesCount - 1)));
-        } else {
-            existingPiecesSize += pieceSize;
+        long existingPiecesSize = 0;
+        for (int i = 0; i < bitField.length; i++) {
+            if (bitField[i]) {
+                if (i == bitField.length - 1) { // Last piece
+                    existingPiecesSize += (torrent.getTotalSize() - (pieceSize * (piecesCount - 1)));
+                } else { // Regular sized piece
+                    existingPiecesSize += pieceSize;
+                }
+            }
         }
         return existingPiecesSize;
     }
 
-    public Set<Integer> getExistingPieceIndexes() {
-        return this.existingPieceIndexes;
-    }
-
-    public Set<Integer> getNotExistingPieceIndexes() {
-        return this.notExistingPieceIndexes;
-    }
-
-    public int getPiecesCount() {
-        return this.piecesCount;
+    public boolean[] getBitField() {
+        return bitField;
     }
 
     public boolean hasPiece(int index) {
-        return this.existingPieceIndexes.contains(index);
+        return bitField[index];
     }
 
     public Piece getPiece(int id) {
@@ -110,25 +98,14 @@ public class PiecesHandler {
         Piece piece = new Piece(id, this.torrent, bytes, this.downloadFileDir);
         if (piece.isValid()) {
             piece.writeBytes(this.existingBytes);
-            this.notExistingPieceIndexes.remove(id);
-            this.existingPieceIndexes.add(id);
+            this.bitField[id] = true;
         } else {
             throw new IllegalStateException("You are trying to write not correct bytes");
         }
     }
 
-    private Set<Integer> findNotAvailablePieceIndexes(Set<Integer> existingPieces) {
-        Set<Integer> notExistingPieces = new HashSet<>();
-        for (int i = 0; i < this.piecesCount; i++) {
-            if (!existingPieces.contains(i)) {
-                notExistingPieces.add(i);
-            }
-        }
-        return notExistingPieces;
-    }
-
-    private Set<Integer> findAvailablePieceIndexes() {
-        Set<Integer> existing = new HashSet<>();
+    private boolean[] findBitField() {
+        boolean[] bitField = new boolean[piecesCount];
 
         for (int i = 0; i < piecesCount; i++) {
             int fromBytes = this.pieceSize * i;
@@ -143,12 +120,12 @@ public class PiecesHandler {
             byte[] pieceBytes = Arrays.copyOfRange(this.existingBytes, fromBytes, toBytes);
 
             Piece piece = new Piece(i, this.torrent, pieceBytes, this.downloadFileDir);
-            if (piece.isValid()) { // verifying if the bytes really correspond to torrent file metadata
-                existing.add(piece.getId());
-            }
+
+            // verifying if the bytes really correspond to torrent file metadata
+            bitField[i] = piece.isValid();
         }
 
-        return existing;
+        return bitField;
     }
 
     private byte[] getDictionaryBytes(String dirPath) throws IOException {
@@ -212,6 +189,26 @@ public class PiecesHandler {
             throw new IllegalStateException("Piece is either not downloaded or there's a mistake in " +
                     "the code with piece " + "id = " + id);
         }
+    }
+
+    public Set<Integer> getNotExistingPieceIndexes() {
+        Set<Integer> notExistingPieces = new HashSet<>();
+        for (int i = 0; i < bitField.length; i++) {
+            if (!bitField[i]) {
+                notExistingPieces.add(i);
+            }
+        }
+        return notExistingPieces;
+    }
+
+    public Set<Integer> getExistingPieceIndexes() {
+        Set<Integer> existingPieces = new HashSet<>();
+        for (int i = 0; i < bitField.length; i++) {
+            if (bitField[i]) {
+                existingPieces.add(i);
+            }
+        }
+        return existingPieces;
     }
 
 }

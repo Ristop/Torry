@@ -10,12 +10,25 @@ public class PeerState implements AutoCloseable {
     private final Peer peer;
     private volatile boolean sentHandshake = false;
     private volatile boolean receivedHandshake = false;
+    private boolean[] bitField = null;
 
     private final NetworkManager networkManager;
 
     public PeerState(Peer peer) throws IOException {
         this.peer = peer;
         this.networkManager = new NetworkManager(peer);
+    }
+
+    public void setBitField(boolean[] bitField) {
+        this.bitField = bitField;
+    }
+
+    public boolean bitFieldSet() {
+        return bitField != null;
+    }
+
+    public void sendBitField(boolean[] bitField) throws IOException {
+        networkManager.bitField(bitField);
     }
 
     public void sendPiece(Piece piece) throws IOException {
