@@ -31,6 +31,10 @@ public class PeerState implements AutoCloseable {
         return bitField != null;
     }
 
+    public boolean hasPiece(int index) {
+        return bitField[index];
+    }
+
     public void sendHave(int index) throws IOException {
         networkManager.have(index);
     }

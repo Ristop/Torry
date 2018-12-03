@@ -198,7 +198,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         ArrayList<PeerState> peerStates = new ArrayList<>(peers.values());
 
         for (PeerState peerState : peerStates) {
-            if (peerState.handshakeDone() && peerState.bitFieldSet()) {
+            if (peerState.handshakeDone() && peerState.bitFieldSet() && peerState.hasPiece(index)) {
                 Peer peer = peerState.getPeer();
                 try {
                     peerState.sendRequestPiece(index);
