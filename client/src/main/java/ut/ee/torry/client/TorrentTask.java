@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ut.ee.torry.client.event.BitField;
 import ut.ee.torry.client.event.Handshake;
+import ut.ee.torry.client.event.Have;
 import ut.ee.torry.client.event.RequestPiece;
 import ut.ee.torry.client.event.SendPiece;
 import ut.ee.torry.client.event.TorryRequest;
@@ -38,7 +39,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     private final ScheduledExecutorService seederExecutor = Executors.newSingleThreadScheduledExecutor();
     private final ScheduledExecutorService requesterExecutor = Executors.newSingleThreadScheduledExecutor();
     private static final long DEFAULT_ANNOUNCE_INTERVAL = 10L;
-    private static final long DEFAULT_REQUEST_INTERVAL = 200L;
+    private static final long DEFAULT_REQUEST_INTERVAL = 50L;
 
     private final String peerId;
     private final int port;
@@ -135,10 +136,11 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                 if (!peers.containsKey(peer.getId())) {
                     try {
                         PeerState peerState = new PeerState(peer);
-                        peerState.handShake(torrent, peerId);
+                        peerState.sendHandShake(torrent, peerId);
                         if (queuedHandshakes.contains(peer.getId())) {
                             peerState.receivedHandshake();
                             queuedHandshakes.remove(peer.getId());
+                            peerState.sendBitField(piecesHandler.getBitField());
                         }
                         peers.put(peer.getId(), peerState);
                     } catch (IOException e) {
@@ -159,7 +161,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                 if (peers.containsKey(request.getPeerId())) {
                     PeerState peerState = peers.get(request.getPeerId());
                     // Is the handshake done?
-                    if (peerState.handshakeDone()) {
+                    if (peerState.handshakeDone() && peerState.bitFieldSet()) {
                         Peer peer = peerState.getPeer();
                         try {
                             Piece piece = piecesHandler.getPiece(request.getIndex());
@@ -179,6 +181,14 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         }
     }
 
+    private void sendHaveToAllPeers(int index) throws IOException {
+        for (PeerState peerState : peers.values()) {
+            if (peerState.handshakeDone() && peerState.bitFieldSet()) {
+                peerState.sendHave(index);
+            }
+        }
+    }
+
     private void request() {
         List<Integer> existing = new ArrayList<>(piecesHandler.getNotExistingPieceIndexes());
         int index = existing.get(random.nextInt(existing.size()));
@@ -186,10 +196,10 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         ArrayList<PeerState> peerStates = new ArrayList<>(peers.values());
 
         for (PeerState peerState : peerStates) {
-            if (peerState.handshakeDone()) {
+            if (peerState.handshakeDone() && peerState.bitFieldSet()) {
                 Peer peer = peerState.getPeer();
                 try {
-                    peerState.requestPiece(index);
+                    peerState.sendRequestPiece(index);
                     log.info("Sent piece request for piece with index {} to peer {}.", index, peer);
                 } catch (IOException e) {
                     peers.remove(peer.getId());
@@ -217,6 +227,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                     if (!piecesHandler.hasPiece(sendPiece.getIndex())) {
                         log.info("Writing piece {}", sendPiece);
                         piecesHandler.writePiece(sendPiece.getIndex(), sendPiece.getBytes());
+                        sendHaveToAllPeers(sendPiece.getIndex());
                         log.info("Successfully wrote piece {}", sendPiece);
                     }
                 } catch (IOException e) {
@@ -240,7 +251,14 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                 }
             } else if (event instanceof BitField) {
                 BitField bitField = (BitField) event;
-                peers.get(bitField.getPeerId()).setBitField(bitField.getBitField());
+                synchronized (peers) {
+                    peers.get(bitField.getPeerId()).setBitField(bitField.getBitField());
+                }
+            } else if (event instanceof Have) {
+                Have have = (Have) event;
+                synchronized (peers) {
+                    peers.get(have.getPeerId()).setPeerHave(have.getIndex());
+                }
             }
             // TODO: handle other events
         }

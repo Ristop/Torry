@@ -18,4 +18,12 @@ public class BitField implements TorryRequest {
         return peerId;
     }
 
+    @Override
+    public String toString() {
+        return "BitField{" +
+                "bitField=<omitted>" +
+                ", peerId='" + peerId + '\'' +
+                '}';
+    }
+
 }

@@ -19,12 +19,20 @@ public class PeerState implements AutoCloseable {
         this.networkManager = new NetworkManager(peer);
     }
 
+    public synchronized void setPeerHave(int index) {
+        bitField[index] = true;
+    }
+
     public void setBitField(boolean[] bitField) {
         this.bitField = bitField;
     }
 
     public boolean bitFieldSet() {
         return bitField != null;
+    }
+
+    public void sendHave(int index) throws IOException {
+        networkManager.have(index);
     }
 
     public void sendBitField(boolean[] bitField) throws IOException {
@@ -35,11 +43,11 @@ public class PeerState implements AutoCloseable {
         networkManager.sendPiece(piece);
     }
 
-    public void requestPiece(int index) throws IOException {
+    public void sendRequestPiece(int index) throws IOException {
         networkManager.requestPiece(index);
     }
 
-    public void handShake(Torrent torrent, String peerId) throws IOException {
+    public void sendHandShake(Torrent torrent, String peerId) throws IOException {
         networkManager.handShake(torrent, peerId);
         this.sentHandshake = true;
     }

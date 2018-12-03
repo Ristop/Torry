@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ut.ee.torry.client.event.BitField;
 import ut.ee.torry.client.event.Handshake;
+import ut.ee.torry.client.event.Have;
 import ut.ee.torry.client.event.RequestPiece;
 import ut.ee.torry.client.event.SendPiece;
 import ut.ee.torry.client.event.TorryRequest;
@@ -101,7 +102,11 @@ public class ClientServerListener implements Runnable {
         int len = dis.readInt();
         byte id = dis.readByte();
 
-        if (id == 5) {
+        if (id == 4) {
+            short index = dis.readShort();
+            log.info("Received have from peer {}", peerId);
+            return new Have(peerId, index);
+        } else if (id == 5) {
             boolean[] bitfield = new boolean[len - 1];
             for (int i = 0; i < len - 1; i++) {
                 bitfield[i] = dis.readBoolean();
