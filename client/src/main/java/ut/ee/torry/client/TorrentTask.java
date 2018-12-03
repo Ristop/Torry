@@ -43,6 +43,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
 
     private final String peerId;
     private final int port;
+    private long uploaded = 0;
 
     private final Torrent torrent;
     private final String downloadDir;
@@ -82,7 +83,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                         torrent.getInfo_hash(),
                         peerId,
                         port,
-                        0,
+                        this.uploaded,
                         piecesHandler.getBytesDownloaded(),
                         torrent.getTotalSize() - piecesHandler.getBytesDownloaded()
                 ).withEvent("stop")
@@ -122,7 +123,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                         torrent.getInfo_hash(),
                         peerId,
                         port,
-                        0,
+                        this.uploaded,
                         piecesHandler.getBytesDownloaded(),
                         torrent.getTotalSize() - piecesHandler.getBytesDownloaded()
                 )
@@ -166,6 +167,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                         try {
                             Piece piece = piecesHandler.getPiece(request.getIndex());
                             peerState.sendPiece(piece);
+                            uploaded += piece.getBytes().length;
                             log.info("Sent piece with index {} to peer {}.", request.getIndex(), peer);
                         } catch (IOException e) {
                             peers.remove(peer.getId());
