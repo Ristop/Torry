@@ -56,6 +56,10 @@ public class Peer {
         return left;
     }
 
+    public double getPercentage() {
+        return Math.round((downloaded * 1.0 / (left + downloaded)) * 10000.0) / 100.0;
+    }
+
     public boolean isComplete() {
         return left == 0;
     }
