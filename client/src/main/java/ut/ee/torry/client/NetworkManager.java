@@ -49,7 +49,7 @@ public class NetworkManager implements AutoCloseable {
         dos.writeBytes(peerId);
         dos.flush();
 
-        log.info("Sent handshake request to peer: {}", peerId);
+        log.info("Sent handshake request to peer for torrent {}", torrent.getInfo_hash());
     }
 
     /**
