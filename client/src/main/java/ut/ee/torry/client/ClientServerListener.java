@@ -20,12 +20,18 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Main listener class for capturing and distributing events
+ */
 public class ClientServerListener implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(TorrentTask.class);
 
     private final int port;
 
+    /**
+     * Queues for each torrent file where the captured events are put
+     */
     private final Map<String, BlockingQueue<TorryRequest>> requestQueues;
 
     public ClientServerListener(int port, Map<String, BlockingQueue<TorryRequest>> requestQueues) {
@@ -42,6 +48,9 @@ public class ClientServerListener implements Runnable {
         }
     }
 
+    /**
+     * Starts listening on the socket and supplies captured events to requestQueues
+     */
     public void startListener() throws IOException {
         log.info("Starting server socket listening on port {}.", port);
         try (ServerSocket serverSocket = new ServerSocket(port)) {
@@ -53,14 +62,24 @@ public class ClientServerListener implements Runnable {
 
                 executor.execute(() -> {
                     try (DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()))) {
+
+                        // First event must always be handshake!
                         Handshake handshake = parseHandshake(in);
 
-                        BlockingQueue<TorryRequest> requestQueue = requestQueues.get(handshake.getTorrentHash());
+                        // If we know the torrent for this handshake
+                        if (requestQueues.containsKey(handshake.getTorrentHash())) {
+                            BlockingQueue<TorryRequest> requestQueue = requestQueues.get(handshake.getTorrentHash());
 
-                        requestQueue.put(handshake);
-                        while (!socket.isClosed()) {
-                            requestQueue.put(parseLengthPrefixedMessage(in, handshake.getPeerId()));
+                            requestQueue.put(handshake);
+                            while (!socket.isClosed()) {
+                                // After handshake is received, only length prefixed messages are allowed
+                                // parse them and put them to a queue
+                                requestQueue.put(parseLengthPrefixedMessage(in, handshake.getPeerId()));
+                            }
+                        } else {
+                            log.warn("Received handshake for unknown torrent {}", handshake.getTorrentHash());
                         }
+
                     } catch (IOException e) {
                         log.error("Unable to read from socket: ", e);
                     } catch (InterruptedException e) {
@@ -74,6 +93,9 @@ public class ClientServerListener implements Runnable {
         }
     }
 
+    /**
+     * Parses and returns handshake object
+     */
     private Handshake parseHandshake(DataInputStream dis) throws IOException {
         byte pstrLen = dis.readByte();
 
@@ -98,6 +120,9 @@ public class ClientServerListener implements Runnable {
         return new Handshake(peerId, torrentHash, pstr);
     }
 
+    /**
+     * Parse and return length prefixed message
+     */
     private TorryRequest parseLengthPrefixedMessage(DataInputStream dis, String peerId) throws IOException {
         int len = dis.readInt();
         byte id = dis.readByte();

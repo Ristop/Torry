@@ -41,7 +41,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
 
     private static final long DEFAULT_ANNOUNCE_INTERVAL = 10L;
     private static final long DEFAULT_REQUESTED_PIECES_CLEANING_INTERVAL = 10L;
-    private static final long DEFAULT_REQUEST_INTERVAL = 50L;
+    private static final long DEFAULT_REQUEST_INTERVAL = 10L;
 
     private final String peerId;
     private final int port;

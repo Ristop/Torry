@@ -10,12 +10,16 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
+/**
+ * Main class for client to send messages to other peers
+ */
 public class NetworkManager implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(NetworkManager.class);
 
     private static final String PSTR = "BitTorrent protocol";
 
+    // Peer info
     private final String ip;
     private final int port;
     private final Socket socket;

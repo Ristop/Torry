@@ -15,6 +15,9 @@ import java.util.Arrays;
 import java.util.List;
 
 
+/**
+ * Class that represents a single torrent file piece
+ */
 public class Piece {
 
     private final int id;
@@ -184,6 +187,5 @@ public class Piece {
             currentByteIndexInDir = currentByteIndexInDir + torrentFile.getFileLength().intValue();
         }
     }
-
 
 }
