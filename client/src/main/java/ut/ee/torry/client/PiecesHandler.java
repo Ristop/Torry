@@ -7,9 +7,6 @@ import org.apache.commons.lang3.ArrayUtils;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Objects;
@@ -169,10 +166,11 @@ public class PiecesHandler {
 
         int numberOfBytesBeforeFileEnd = (int) (this.torrent.getTotalSize() - fromBytes);
         byte[] currentPieceBytes;
-        if (numberOfBytesBeforeFileEnd < this.pieceSize)
+        if (numberOfBytesBeforeFileEnd < this.pieceSize) {
             currentPieceBytes = new byte[numberOfBytesBeforeFileEnd];
-        else
+        } else {
             currentPieceBytes = new byte[this.pieceSize];
+        }
 
         file.read(currentPieceBytes);
         file.close();
