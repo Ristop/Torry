@@ -2,7 +2,6 @@ package ut.ee.torry.client;
 
 import be.christophedetroyer.torrent.Torrent;
 import be.christophedetroyer.torrent.TorrentFile;
-import com.typesafe.config.ConfigException;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,9 +14,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+
+import static ut.ee.torry.client.util.PiecesUtil.calcBytesCount;
 
 public class PiecesHandler {
 
@@ -28,7 +28,7 @@ public class PiecesHandler {
     private final int pieceSize;
     private final int piecesCount;
 
-    private final byte[] existingBytes;
+    //private final byte[] existingBytes;
 
     private final boolean[] bitField;
 
@@ -40,24 +40,6 @@ public class PiecesHandler {
 
         String fullPath = this.downloadFileDir + File.separator + this.torrent.getName();
         File downloadedTorrent = new File(fullPath);
-
-        if (downloadedTorrent.isDirectory()) {
-            this.existingBytes = getDictionaryBytes(fullPath);
-        } else if (downloadedTorrent.isFile()) {
-            this.existingBytes = getFileBytes(downloadedTorrent.toPath());
-        } else {
-            int numOfBytes = 0;
-            List<TorrentFile> fileList = torrent.getFileList();
-            if (fileList != null) {
-                for (TorrentFile torrentFile : fileList) {
-                    numOfBytes += torrentFile.getFileLength();
-                }
-            } else {
-                numOfBytes = Math.toIntExact(torrent.getTotalSize());
-            }
-
-            this.existingBytes = new byte[numOfBytes];
-        }
 
         this.bitField = findBitField();
     }
@@ -99,7 +81,7 @@ public class PiecesHandler {
     public synchronized void writePiece(int id, byte[] bytes) throws IOException {
         Piece piece = new Piece(id, this.torrent, bytes, this.downloadFileDir);
         if (piece.isValid()) {
-            piece.writeBytes(this.existingBytes);
+            piece.writeBytes();
             this.bitField[id] = true;
         } else {
             throw new IllegalStateException("You are trying to write not correct bytes");
@@ -189,22 +171,6 @@ public class PiecesHandler {
         }
     }
 
-    private int calcBytesCount(long currentPosition, int pieceSize, long fileLength) {
-        if (currentPosition + pieceSize > fileLength) {
-            return (int) (fileLength - currentPosition);
-        } else {
-            return pieceSize;
-        }
-    }
-
-    private int calcBytesCount(long currentPosition, int bytesAlreadyRead, int pieceSize, long fileLength) {
-        long bytesToRead = fileLength - currentPosition;
-        if (bytesToRead + bytesAlreadyRead > pieceSize){  //can fill the whole piece (can't use all new bytes)
-            return pieceSize - bytesAlreadyRead;
-        } else { // can use all new bytes
-            return (int) bytesToRead;
-        }
-    }
 
     private byte[] getDictionaryBytes(String dirPath) throws IOException {
         byte[] bytes = new byte[0];
