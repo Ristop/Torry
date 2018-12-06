@@ -5,6 +5,10 @@ import ut.ee.torry.common.Peer;
 
 import java.io.IOException;
 
+/**
+ * This class represent the state of a peer that client currently knows about
+ * State is updated when new events are received
+ */
 public class PeerState implements AutoCloseable {
 
     private final Peer peer;

@@ -5,13 +5,18 @@ import be.christophedetroyer.torrent.Torrent;
 import be.christophedetroyer.torrent.TorrentFile;
 import org.apache.commons.codec.digest.DigestUtils;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.List;
 
 import static ut.ee.torry.client.util.PiecesUtil.calcBytesCount;
 
 
+/**
+ * Class that represents a single torrent file piece
+ */
 public class Piece {
 
     private final int id;
@@ -144,4 +149,5 @@ public class Piece {
             return i;
         }
     }
+
 }

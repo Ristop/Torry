@@ -61,6 +61,8 @@ public class ClientStarter {
         this.downloadedFiledDir = Objects.requireNonNull(downloadedFiledDir);
         this.announcer = announcer;
         this.executorService = Executors.newFixedThreadPool(DEFAULT_THREAD_POOL_SIZE);
+
+        // If client is closed, send stop to tracker
         Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
     }
 
@@ -83,7 +85,7 @@ public class ClientStarter {
     }
 
     /**
-     * Entry point for starting downloads. WORK IN PROGRESS and not yet fully implemented
+     * Entry point for starting downloads.
      */
     private void downloadTorrents() throws InterruptedException, ExecutionException, IOException {
 
@@ -108,12 +110,12 @@ public class ClientStarter {
             completionService.submit(torrentTask);
         }
 
-        // Start waiting for tasks to finish
+        // If any of the tasks stop, capture and log it
         for (int i = 0; i < torrents.size(); i++) {
             Future<TorrentTask> future = completionService.take();
 
             TorrentTask downloadTorrentTask = future.get();
-            log.info("{} finished.", downloadTorrentTask);
+            log.info("{} stopped.", downloadTorrentTask);
         }
 
         this.executorService.shutdownNow();

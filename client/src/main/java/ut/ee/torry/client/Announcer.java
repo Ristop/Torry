@@ -1,8 +1,6 @@
 package ut.ee.torry.client;
 
 import org.apache.http.client.utils.URIBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -13,8 +11,6 @@ import java.util.Objects;
 
 @Component
 public class Announcer {
-
-    private static final Logger log = LoggerFactory.getLogger(Announcer.class);
 
     private final RestTemplate restTemplate;
 
@@ -40,7 +36,7 @@ public class Announcer {
         uriBuilder.addParameter("left", String.valueOf(params.getLeft()));
         String event = params.getEvent();
         if (event != null) {
-            uriBuilder.addParameter("event", String.valueOf(event));
+            uriBuilder.addParameter("event", event);
         }
 
         return restTemplate.getForObject(uriBuilder.toString(), TrackerResponse.class);
