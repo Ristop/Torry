@@ -9,9 +9,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Objects;
@@ -31,7 +28,7 @@ public class PiecesHandler {
 
     private final boolean[] bitField;
 
-    public PiecesHandler(Torrent torrent, String downloadFileDirPath) throws IOException {
+    public PiecesHandler(Torrent torrent, String downloadFileDirPath) {
         this.torrent = Objects.requireNonNull(torrent);
         this.downloadFileDir = Objects.requireNonNull(downloadFileDirPath);
         this.pieceSize = torrent.getPieceLength().intValue();
@@ -106,7 +103,7 @@ public class PiecesHandler {
 
             for (TorrentFile torrentFile : torrent.getFileList()) {
                 String filepath = folderLoc + File.separator + String.join(File.separator, torrentFile.getFileDirs());
-                int bytesReadFromFile = 0;
+                long bytesReadFromFile = 0;
                 RandomAccessFile file = new RandomAccessFile(filepath, "r");
 
                 // reading bytes from while according to piece size until all bytes from the file are read
@@ -166,35 +163,29 @@ public class PiecesHandler {
     }
 
     private Piece getPieceByIdForSingleFile(int id) throws IOException {
-        int fromBytes = this.pieceSize * id;
+        long fromBytes = this.pieceSize * id;
         String filePath = downloadFileDir + File.separator + this.torrent.getName();
         RandomAccessFile file = new RandomAccessFile(filePath, "r");
         file.seek(fromBytes);
 
-        int numberOfBytesBeforeFileEnd = (int) (this.torrent.getTotalSize() - fromBytes);
-        byte[] currentPieceBytes;
-        if (numberOfBytesBeforeFileEnd < this.pieceSize)
-            currentPieceBytes = new byte[numberOfBytesBeforeFileEnd];
-        else
-            currentPieceBytes = new byte[this.pieceSize];
-
+        int numberOfBytesBeforeFileEnd = calcBytesCount(file.getFilePointer(), pieceSize, file.length());
+        byte[] currentPieceBytes = new byte[numberOfBytesBeforeFileEnd];
         file.read(currentPieceBytes);
         file.close();
         return returnPiece(new Piece(id, this.torrent, currentPieceBytes, this.downloadFileDir));
     }
 
     private Piece getPieceByIdForDirectory(int id) throws IOException {
-        int fromByte = this.pieceSize * id;
-        int currentByte = 0;
+        long fromByte = this.pieceSize * id;
+        long currentByte = 0;
         byte[] pieceBytes = new byte[0];
-
 
         for (TorrentFile torrentFile : torrent.getFileList()) {
             // we have to take some bytes from that file
             if (currentByte + pieceBytes.length + torrentFile.getFileLength() >= fromByte) {
                 String filePath = downloadFileDir + File.separator + this.torrent.getName() +
                         File.separator + String.join(File.separator, torrentFile.getFileDirs());
-                int pieceStartByteInFile = fromByte + pieceBytes.length - currentByte;
+                long pieceStartByteInFile = fromByte + pieceBytes.length - currentByte;
 
                 RandomAccessFile file = new RandomAccessFile(filePath, "r");
                 int nrOfBytesToRead = calcBytesCount(pieceStartByteInFile, pieceBytes.length, pieceSize, file.length());
@@ -241,5 +232,4 @@ public class PiecesHandler {
         }
         return existingPieces;
     }
-
 }
