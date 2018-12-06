@@ -14,8 +14,6 @@ import java.util.Objects;
 @Component
 public class Announcer {
 
-    private static final Logger log = LoggerFactory.getLogger(Announcer.class);
-
     private final RestTemplate restTemplate;
 
     @Autowired
@@ -40,7 +38,7 @@ public class Announcer {
         uriBuilder.addParameter("left", String.valueOf(params.getLeft()));
         String event = params.getEvent();
         if (event != null) {
-            uriBuilder.addParameter("event", String.valueOf(event));
+            uriBuilder.addParameter("event", event);
         }
 
         return restTemplate.getForObject(uriBuilder.toString(), TrackerResponse.class);

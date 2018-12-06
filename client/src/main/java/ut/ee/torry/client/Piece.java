@@ -12,6 +12,9 @@ import java.util.List;
 import static ut.ee.torry.client.util.PiecesUtil.calcBytesCount;
 
 
+/**
+ * Class that represents a single torrent file piece
+ */
 public class Piece {
 
     private final int id;
@@ -144,4 +147,5 @@ public class Piece {
             return i;
         }
     }
+
 }

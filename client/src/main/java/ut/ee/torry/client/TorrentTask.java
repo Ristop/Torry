@@ -41,7 +41,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
 
     private static final long DEFAULT_ANNOUNCE_INTERVAL = 10L;
     private static final long DEFAULT_REQUESTED_PIECES_CLEANING_INTERVAL = 10L;
-    private static final long DEFAULT_REQUEST_INTERVAL = 50L;
+    private static final long DEFAULT_REQUEST_INTERVAL = 10L;
 
     private final String peerId;
     private final int port;
@@ -233,13 +233,13 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                     Peer peer = peerState.getPeer();
                     try {
                         peerState.sendRequestPiece(index);
+                        requestedPieces.add(index);
                         log.info("Sent piece request for piece with index {} to peer {}.", index, peer);
                     } catch (IOException e) {
                         peers.remove(peer.getId());
                         log.error("Failed to seed to peer {}. Closing connection:", peer, e);
                     }
                 }
-                requestedPieces.add(index);
             }
         }
 
