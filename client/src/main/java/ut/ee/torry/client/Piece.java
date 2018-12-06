@@ -4,10 +4,8 @@ import be.christophedetroyer.bencoding.Utils;
 import be.christophedetroyer.torrent.Torrent;
 import be.christophedetroyer.torrent.TorrentFile;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang3.ArrayUtils;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 
@@ -121,8 +119,6 @@ public class Piece {
         int bytesWritten = 0;
 
         for (TorrentFile torrentFile : this.torrent.getFileList()) {
-            long fileEndIndex = currentByteIndexInDir + torrentFile.getFileLength();
-
             if (pieceStartIndex <= currentByteIndexInDir + torrentFile.getFileLength()) {  // we have to write into that file
                 String filePath = path + File.separator + String.join(File.separator, torrentFile.getFileDirs());
                 long startLocation = getMinimumStartLocation(pieceStartIndex - currentByteIndexInDir);
@@ -150,79 +146,4 @@ public class Piece {
             return i;
         }
     }
-
-
-    private int writeBytesToFile(
-            TorrentFile torrentFile,
-            int currentByteIndex,
-            int pieceStartIndex,
-            byte[] bytesToWrite
-    ) throws IOException {
-        String fileLocInDir = String.join(File.separator, torrentFile.getFileDirs());
-        File file = new File(this.file.getPath() + File.separator + fileLocInDir);
-        byte[] fileContent = Files.readAllBytes(file.toPath());
-        int nrOfOldStartBytes = Math.max(pieceStartIndex - currentByteIndex, 0);
-
-        byte[] newContent;
-        if (bytesToWrite.length + nrOfOldStartBytes <= fileContent.length) {  // can write all the bytes
-            int nrOfOldEndBytes = fileContent.length - bytesToWrite.length - nrOfOldStartBytes;
-            newContent = changeByteArray(fileContent, nrOfOldStartBytes, bytesToWrite, nrOfOldEndBytes);
-        } else {  // all the bytes do not fit
-            int nrOfBytesToWrite = fileContent.length - nrOfOldStartBytes;
-            bytesToWrite = Arrays.copyOfRange(bytesToWrite, 0, nrOfBytesToWrite);
-            newContent = changeByteArray(fileContent, nrOfOldStartBytes, bytesToWrite, 0);
-        }
-        if (newContent.length == fileContent.length) {
-            try (OutputStream os = new FileOutputStream(file)) {
-                os.write(newContent);
-            }
-        } else {
-            throw new IllegalStateException("Something is wrong");
-        }
-        return bytesToWrite.length;
-    }
-
-    private void changeByteArray(byte[] initialContent) {
-        int begin = this.id * this.torrent.getPieceLength().intValue();
-
-        for (int i = 0; i < this.getBytes().length; i++) {
-            initialContent[i + begin] = this.getBytes()[i];
-        }
-    }
-
-    private byte[] changeByteArray(byte[] initialContent, int nrOfOldStartBytes, byte[] bytesToWrite, int nrOfOldEndBytes) {
-        byte[] beginBytes = Arrays.copyOfRange(initialContent, 0, nrOfOldStartBytes);
-        byte[] firstHalf = ArrayUtils.addAll(beginBytes, bytesToWrite);
-        if (initialContent.length - nrOfOldStartBytes - bytesToWrite.length > 1) {
-            byte[] endBytes = Arrays.copyOfRange(initialContent, initialContent.length - nrOfOldEndBytes, initialContent.length);
-            return ArrayUtils.addAll(firstHalf, endBytes);
-        } else {
-            return firstHalf;
-        }
-    }
-
-    /*
-    private void writeBytesToDir() throws IOException {
-        int pieceStartIndex = this.id * this.torrent.getPieceLength().intValue();
-
-        int currentByteIndexInDir = 0;
-        int fileEndIndex;
-        byte[] bytesToWrite = getBytes();
-
-        for (TorrentFile torrentFile : this.torrent.getFileList()) {
-            fileEndIndex = currentByteIndexInDir + torrentFile.getFileLength().intValue();
-            if (fileEndIndex >= pieceStartIndex) {  // we have to write into that file
-                // here w have to check if we write all bytes to file or not
-                int writtenBytesCount = writeBytesToFile(torrentFile, currentByteIndexInDir, pieceStartIndex, bytesToWrite);
-                if (writtenBytesCount >= bytesToWrite.length) { // all needed bytes are written
-                    return;
-                } else {
-                    bytesToWrite = Arrays.copyOfRange(bytesToWrite, writtenBytesCount, bytesToWrite.length);
-                }
-            }
-            currentByteIndexInDir = currentByteIndexInDir + torrentFile.getFileLength().intValue();
-        }
-    }*/
-
-
 }
