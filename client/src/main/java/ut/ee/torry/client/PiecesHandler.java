@@ -2,6 +2,7 @@ package ut.ee.torry.client;
 
 import be.christophedetroyer.torrent.Torrent;
 import be.christophedetroyer.torrent.TorrentFile;
+import com.typesafe.config.ConfigException;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -242,32 +243,45 @@ public class PiecesHandler {
 
         file.read(currentPieceBytes);
         file.close();
-        Piece piece = new Piece(id, this.torrent, currentPieceBytes, this.downloadFileDir);
+        return returnPiece(new Piece(id, this.torrent, currentPieceBytes, this.downloadFileDir));
+    }
 
+    private Piece getPieceByIdForDirectory(int id) throws IOException {
+        int fromByte = this.pieceSize * id;
+        int currentByte = 0;
+        byte[] pieceBytes = new byte[0];
+
+
+        for (TorrentFile torrentFile : torrent.getFileList()) {
+            // we have to take some bytes from that file
+            if (currentByte + pieceBytes.length + torrentFile.getFileLength() >= fromByte) {
+                String filePath = downloadFileDir + File.separator + this.torrent.getName() +
+                        File.separator + String.join(File.separator, torrentFile.getFileDirs());
+                int pieceStartByteInFile = fromByte + pieceBytes.length - currentByte;
+
+                RandomAccessFile file = new RandomAccessFile(filePath, "r");
+                int nrOfBytesToRead = calcBytesCount(pieceStartByteInFile, pieceBytes.length, pieceSize, file.length());
+                file.seek(pieceStartByteInFile);
+                byte[] currentFileBytes = new byte[nrOfBytesToRead];
+                file.read(currentFileBytes);
+                file.close();
+                pieceBytes = ArrayUtils.addAll(pieceBytes, currentFileBytes);
+
+                if (pieceBytes.length == pieceSize) {
+                    return returnPiece(new Piece(id, this.torrent, pieceBytes, this.downloadFileDir));
+                }
+            }
+            currentByte += torrentFile.getFileLength();
+        }
+        // adding last piece which might not be with complete length
+        return returnPiece(new Piece(id, this.torrent, pieceBytes, this.downloadFileDir));
+    }
+
+    private Piece returnPiece(Piece piece) {
         if (piece.isValid()) {
             return piece;
         } else {
             throw new AssertionError("Piece is either not downloaded or there's a mistake in the code");
-        }
-    }
-
-    private Piece getPieceByIdForDirectory(int id) {
-        int endIndex = this.torrent.getPieceLength().intValue() * (id + 1);
-        if (endIndex > this.existingBytes.length) {  // last piece is not full piece
-            endIndex = this.existingBytes.length;
-        }
-        byte[] currentPieceBytes = Arrays.copyOfRange(
-                this.existingBytes,
-                this.torrent.getPieceLength().intValue() * id,
-                endIndex
-        );
-
-        Piece piece = new Piece(id, this.torrent, currentPieceBytes, this.downloadFileDir);
-        if (piece.isValid()) {
-            return piece;
-        } else {
-            throw new IllegalStateException("Piece is either not downloaded or there's a mistake in " +
-                    "the code with piece " + "id = " + id);
         }
     }
 
