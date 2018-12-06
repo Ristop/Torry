@@ -62,10 +62,9 @@ public class Piece {
     }
 
     private void createFile() throws IOException {
-        byte[] defaultContent = new byte[torrent.getTotalSize().intValue()];
-        try (OutputStream os = new FileOutputStream(new File(this.path))) {
-            os.write(defaultContent);
-        }
+        RandomAccessFile f = new RandomAccessFile(this.path, "rw");
+        f.setLength(torrent.getTotalSize());
+        f.close();
     }
 
     private void writeBytesToFile() throws IOException {
@@ -80,15 +79,14 @@ public class Piece {
         boolean success = this.file.mkdir();
         if (success) {
             for (TorrentFile torrentFile : this.torrent.getFileList()) {
-                if (torrentFile.getFileDirs().size() > 1) {
+                if (torrentFile.getFileDirs().size() >= 1) {
                     createSubFoldersIFNeeded(this.file.getPath(), torrentFile.getFileDirs());
                 }
                 String fileLocInDir = String.join(File.separator, torrentFile.getFileDirs());
-                File subFile = new File(this.file.getPath() + File.separator + fileLocInDir);
-                byte[] defaultContent = new byte[torrentFile.getFileLength().intValue()];
-                try (OutputStream os = new FileOutputStream(subFile)) {
-                    os.write(defaultContent);
-                }
+                RandomAccessFile subFile = new RandomAccessFile(this.file.getPath() + File.separator + fileLocInDir,
+                        "rw");
+                subFile.setLength(torrentFile.getFileLength());
+                subFile.close();
             }
         } else {
             throw new IllegalStateException("Creating directory failed");
