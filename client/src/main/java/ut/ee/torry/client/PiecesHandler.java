@@ -28,7 +28,6 @@ public class PiecesHandler {
     private final int pieceSize;
     private final int piecesCount;
 
-    //private final byte[] existingBytes;
 
     private final boolean[] bitField;
 
@@ -37,10 +36,6 @@ public class PiecesHandler {
         this.downloadFileDir = Objects.requireNonNull(downloadFileDirPath);
         this.pieceSize = torrent.getPieceLength().intValue();
         this.piecesCount = torrent.getPieces().size();
-
-        String fullPath = this.downloadFileDir + File.separator + this.torrent.getName();
-        File downloadedTorrent = new File(fullPath);
-
         this.bitField = findBitField();
     }
 
@@ -88,7 +83,6 @@ public class PiecesHandler {
         }
     }
 
-
     private boolean[] findBitField() {
         String fullPath = this.downloadFileDir + File.separator + this.torrent.getName();
         File downloadedTorrent = new File(fullPath);
@@ -134,7 +128,7 @@ public class PiecesHandler {
                 }
                 file.close();
 
-                if (!pieceBytes.equals(new byte[0])) {  // if last piece isn't exactly full, then we need to add it
+                if (!Arrays.equals(pieceBytes, new byte[0])) {  // if last piece isn't exactly full, then we need to add it
                     Piece piece = new Piece(currentPiece, this.torrent, pieceBytes, this.downloadFileDir);
                     bitField[currentPiece] = piece.isValid();
                 }
@@ -169,29 +163,6 @@ public class PiecesHandler {
             Arrays.fill(bitField, false);
             return bitField;
         }
-    }
-
-
-    private byte[] getDictionaryBytes(String dirPath) throws IOException {
-        byte[] bytes = new byte[0];
-
-        for (TorrentFile torrentFile : torrent.getFileList()) {
-            Path path = Paths.get(dirPath, torrentFile.getFileDirs().toArray(new String[0]));
-
-            if (Files.exists(path)) {
-                byte[] fileContent = Files.readAllBytes(path);
-                bytes = ArrayUtils.addAll(bytes, fileContent);
-            } else {
-                // TODO : what if file length is Long?
-                byte[] emptyBytes = new byte[torrentFile.getFileLength().intValue()];
-                bytes = ArrayUtils.addAll(bytes, emptyBytes);
-            }
-        }
-        return bytes;
-    }
-
-    private byte[] getFileBytes(Path path) throws IOException {
-        return Files.readAllBytes(path);
     }
 
     private Piece getPieceByIdForSingleFile(int id) throws IOException {
