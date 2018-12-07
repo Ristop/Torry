@@ -72,7 +72,6 @@ public class PiecesHandler {
     }
 
     public Piece getPiece(int id) throws IOException {
-        System.out.println("Reading piece: " + id);
         if (torrent.isSingleFileTorrent()) {
             return getPieceByIdForSingleFile(id);
         } else {
@@ -84,13 +83,15 @@ public class PiecesHandler {
         return getPiece(id).getBytes();
     }
 
-    public synchronized void writePiece(int id, byte[] bytes) throws IOException {
+    public synchronized boolean writePiece(int id, byte[] bytes) throws IOException {
         Piece piece = new Piece(id, this.torrent, bytes, this.downloadFileDir);
         if (piece.isValid()) {
             piece.writeBytes();
             this.bitField[id] = true;
+            return true;
         } else {
             log.error("You are trying to write not correct bytes for piece {}", id);
+            return false;
         }
     }
 

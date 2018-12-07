@@ -1,9 +1,9 @@
 package ut.ee.torry.client;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ut.ee.torry.client.event.BitField;
+import ut.ee.torry.client.event.ErroredRequest;
 import ut.ee.torry.client.event.Handshake;
 import ut.ee.torry.client.event.Have;
 import ut.ee.torry.client.event.RequestPiece;
@@ -61,10 +61,12 @@ public class ClientServerListener implements Runnable {
                 log.info("Starting to receive info");
 
                 executor.execute(() -> {
+                    String peerId = "";
                     try (DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()))) {
 
                         // First event must always be handshake!
                         Handshake handshake = parseHandshake(in);
+                        peerId = handshake.getPeerId();
 
                         // If we know the torrent for this handshake
                         if (requestQueues.containsKey(handshake.getTorrentHash())) {
@@ -74,16 +76,19 @@ public class ClientServerListener implements Runnable {
                             while (!socket.isClosed()) {
                                 // After handshake is received, only length prefixed messages are allowed
                                 // parse them and put them to a queue
-                                requestQueue.put(parseLengthPrefixedMessage(in, handshake.getPeerId()));
+                                TorryRequest req = parseLengthPrefixedMessage(in, peerId);
+                                requestQueue.put(req);
+                                if (req instanceof ErroredRequest) {
+                                    throw new IllegalStateException("Received erroneous request. Stopping communication");
+                                }
                             }
                         } else {
                             log.warn("Received handshake for unknown torrent {}", handshake.getTorrentHash());
                         }
 
-                    } catch (IOException e) {
-                        log.error("Unable to read from socket: ", e);
-                    } catch (InterruptedException e) {
-                        log.error("Unable to add event to queue: ", e);
+                    } catch (Exception e) {
+                        log.error("Communication socket closed with client {} due to {}: {}",
+                                peerId, e.getClass().getSimpleName(), e.getMessage());
                     }
 
                 });
@@ -149,8 +154,8 @@ public class ClientServerListener implements Runnable {
             log.info("Received piece <len:{}><id:{}><index:{}><data:<omitted>>", len, id, index);
             return new SendPiece(index, bytes);
         } else {
-            log.warn("Received event with id {} which is not yet supported or unknown.", id);
-            throw new NotImplementedException("Received event with id " + id + " which is not yet supported or unknown.");
+            log.error("Received event with id {} which is not yet supported or unknown.", id);
+            return new ErroredRequest(peerId);
         }
 
     }
