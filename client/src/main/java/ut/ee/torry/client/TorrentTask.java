@@ -89,7 +89,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                         port,
                         this.uploaded,
                         piecesHandler.getBytesDownloaded(),
-                        torrent.getTotalSize() - piecesHandler.getBytesDownloaded()
+                        piecesHandler.getTotalSize() - piecesHandler.getBytesDownloaded()
                 ).withEvent("stop")
         );
     }
