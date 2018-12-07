@@ -20,7 +20,7 @@ public class PiecesHandler {
     private final String downloadFileDir;
     private final int pieceSize;
     private final int piecesCount;
-
+    private final long totalSize;
 
     private final boolean[] bitField;
 
@@ -30,6 +30,19 @@ public class PiecesHandler {
         this.pieceSize = torrent.getPieceLength().intValue();
         this.piecesCount = torrent.getPieces().size();
         this.bitField = findBitField();
+        if (torrent.getTotalSize() != null) {
+            this.totalSize = torrent.getTotalSize();
+        } else {
+            long tempSize = 0;
+            for (TorrentFile torrentFile : torrent.getFileList()) {
+                tempSize += torrentFile.getFileLength();
+            }
+            totalSize = tempSize;
+        }
+    }
+
+    public long getTotalSize() {
+        return totalSize;
     }
 
     public long getBytesDownloaded() {
@@ -37,7 +50,7 @@ public class PiecesHandler {
         for (int i = 0; i < bitField.length; i++) {
             if (bitField[i]) {
                 if (i == bitField.length - 1) { // Last piece
-                    existingPiecesSize += (torrent.getTotalSize() - (pieceSize * (piecesCount - 1)));
+                    existingPiecesSize += (totalSize - (pieceSize * (piecesCount - 1)));
                 } else { // Regular sized piece
                     existingPiecesSize += pieceSize;
                 }
