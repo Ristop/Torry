@@ -3,6 +3,8 @@ package ut.ee.torry.client;
 import be.christophedetroyer.torrent.Torrent;
 import be.christophedetroyer.torrent.TorrentFile;
 import org.apache.commons.lang3.ArrayUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +17,8 @@ import java.util.Set;
 import static ut.ee.torry.client.util.PiecesUtil.calcBytesCount;
 
 public class PiecesHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(TorrentTask.class);
 
     private final Torrent torrent;
     private final String downloadFileDir;
@@ -86,7 +90,7 @@ public class PiecesHandler {
             piece.writeBytes();
             this.bitField[id] = true;
         } else {
-            throw new IllegalStateException("You are trying to write not correct bytes");
+            log.error("You are trying to write not correct bytes for piece {}", id);
         }
     }
 

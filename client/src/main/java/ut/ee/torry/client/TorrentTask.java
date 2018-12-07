@@ -64,7 +64,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
             String downloadDir,
             Announcer announcer,
             BlockingQueue<TorryRequest> eventQueue
-    ) throws IOException {
+    ) {
         this.peerId = peerId;
         this.port = port;
         this.torrent = torrent;
