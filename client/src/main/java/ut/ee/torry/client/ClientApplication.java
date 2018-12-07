@@ -32,5 +32,4 @@ public class ClientApplication {
     public void shutdown() {
         log.info("Shutting down client.");
     }
-
 }

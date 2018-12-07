@@ -3,6 +3,7 @@ package ut.ee.torry.client;
 import be.christophedetroyer.torrent.Torrent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import performance_testing.PerformanceTest;
 import ut.ee.torry.client.event.RequestPiece;
 import ut.ee.torry.client.event.SendPiece;
 import ut.ee.torry.client.event.TorrentRequest;
@@ -22,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
 
 public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
 
@@ -47,6 +49,8 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     private final BlockingQueue<RequestPiece> seedQueue;
     private final Map<Peer, PeerState> peers = new ConcurrentHashMap<>();
 
+    private final PerformanceTest performanceTest;
+
     public TorrentTask(
             String peerId,
             int port,
@@ -62,6 +66,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         this.announcer = announcer;
         this.eventQueue = eventQueue;
         this.piecesHandler = new PiecesHandler(torrent, downloadDir);
+        this.performanceTest = new PerformanceTest("./client/src/main/java/performance_testing/times_for_1MB.txt",piecesHandler.getFilePath(), 5);
         seedQueue = new ArrayBlockingQueue<>(32);
         startAnnouncer();
         startSeeder();
@@ -167,8 +172,28 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     }
 
     private void request() {
+        performanceTest.startClockIfNotStarted();
+
         List<Integer> existing = new ArrayList<>(piecesHandler.getNotExistingPieceIndexes());
+
+        if(existing.isEmpty()){
+            performanceTest.stopClock();
+            performanceTest.writeTimeToFile();
+
+            if(performanceTest.getIterations_nr()>0) {
+                performanceTest.deleteFile();
+                piecesHandler.setExistingPieceIndexesBackToZero();
+                existing = new ArrayList<>(piecesHandler.getNotExistingPieceIndexes());
+
+            }else{
+                performanceTest.deleteFile();
+                log.info(piecesHandler.getFilePath());
+                log.info("Performance tesing done");
+            }
+        }
+
         int index = existing.get(random.nextInt(existing.size()));
+
 
         List<Map.Entry<Peer, PeerState>> entries = new ArrayList<>(peers.entrySet());
 

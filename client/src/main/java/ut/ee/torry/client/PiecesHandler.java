@@ -57,6 +57,13 @@ public class PiecesHandler {
         return this.existingPieceIndexes;
     }
 
+
+    // Added just for pefromance testing
+    public void setExistingPieceIndexesBackToZero(){
+        this.notExistingPieceIndexes.addAll(existingPieceIndexes);
+        this.existingPieceIndexes.clear();
+    }
+
     public Set<Integer> getNotExistingPieceIndexes() {
         return this.notExistingPieceIndexes;
     }
@@ -93,6 +100,7 @@ public class PiecesHandler {
     }
 
     private Set<Integer> findNotAvailablePieceIndexes(Set<Integer> existingPieces) {
+        log.info("Exis pieces in cursed method {}", existingPieces);
         Set<Integer> notExistingPieces = new HashSet<>();
         for (int i = 0; i < this.piecesCount; i++) {
             if (!existingPieces.contains(i)) {
@@ -100,6 +108,10 @@ public class PiecesHandler {
             }
         }
         return notExistingPieces;
+    }
+
+    public String getFilePath(){
+        return this.downloadFileDir + File.separator + this.torrent.getName();
     }
 
     private Set<Integer> findAvailablePieceIndexes() throws IOException {
