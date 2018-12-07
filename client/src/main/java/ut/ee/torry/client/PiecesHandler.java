@@ -3,57 +3,50 @@ package ut.ee.torry.client;
 import be.christophedetroyer.torrent.Torrent;
 import be.christophedetroyer.torrent.TorrentFile;
 import org.apache.commons.lang3.ArrayUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import static ut.ee.torry.client.util.PiecesUtil.calcBytesCount;
+
 public class PiecesHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(TorrentTask.class);
 
     private final Torrent torrent;
     private final String downloadFileDir;
     private final int pieceSize;
     private final int piecesCount;
-
-    private final byte[] existingBytes;
+    private final long totalSize;
 
     private final boolean[] bitField;
 
-    public PiecesHandler(Torrent torrent, String downloadFileDirPath) throws IOException {
+    public PiecesHandler(Torrent torrent, String downloadFileDirPath) {
         this.torrent = Objects.requireNonNull(torrent);
         this.downloadFileDir = Objects.requireNonNull(downloadFileDirPath);
         this.pieceSize = torrent.getPieceLength().intValue();
         this.piecesCount = torrent.getPieces().size();
-
-        String fullPath = this.downloadFileDir + File.separator + this.torrent.getName();
-        File downloadedTorrent = new File(fullPath);
-
-        if (downloadedTorrent.isDirectory()) {
-            this.existingBytes = getDictionaryBytes(fullPath);
-        } else if (downloadedTorrent.isFile()) {
-            this.existingBytes = getFileBytes(downloadedTorrent.toPath());
-        } else {
-            int numOfBytes = 0;
-            List<TorrentFile> fileList = torrent.getFileList();
-            if (fileList != null) {
-                for (TorrentFile torrentFile : fileList) {
-                    numOfBytes += torrentFile.getFileLength();
-                }
-            } else {
-                numOfBytes = Math.toIntExact(torrent.getTotalSize());
-            }
-
-            this.existingBytes = new byte[numOfBytes];
-        }
-
         this.bitField = findBitField();
+        if (torrent.getTotalSize() != null) {
+            this.totalSize = torrent.getTotalSize();
+        } else {
+            long tempSize = 0;
+            for (TorrentFile torrentFile : torrent.getFileList()) {
+                tempSize += torrentFile.getFileLength();
+            }
+            totalSize = tempSize;
+        }
+    }
+
+    public long getTotalSize() {
+        return totalSize;
     }
 
     public long getBytesDownloaded() {
@@ -61,7 +54,7 @@ public class PiecesHandler {
         for (int i = 0; i < bitField.length; i++) {
             if (bitField[i]) {
                 if (i == bitField.length - 1) { // Last piece
-                    existingPiecesSize += (torrent.getTotalSize() - (pieceSize * (piecesCount - 1)));
+                    existingPiecesSize += (totalSize - (pieceSize * (piecesCount - 1)));
                 } else { // Regular sized piece
                     existingPiecesSize += pieceSize;
                 }
@@ -78,7 +71,7 @@ public class PiecesHandler {
         return bitField[index];
     }
 
-    public Piece getPiece(int id) {
+    public Piece getPiece(int id) throws IOException {
         if (torrent.isSingleFileTorrent()) {
             return getPieceByIdForSingleFile(id);
         } else {
@@ -86,104 +79,152 @@ public class PiecesHandler {
         }
     }
 
-    public byte[] getPieceBytes(int id) {
+    public byte[] getPieceBytes(int id) throws IOException {
         return getPiece(id).getBytes();
     }
 
-    public synchronized void writePiece(int id, byte[] bytes) throws IOException {
+    public synchronized boolean writePiece(int id, byte[] bytes) throws IOException {
         Piece piece = new Piece(id, this.torrent, bytes, this.downloadFileDir);
         if (piece.isValid()) {
-            piece.writeBytes(this.existingBytes);
+            piece.writeBytes();
             this.bitField[id] = true;
+            return true;
         } else {
-            throw new IllegalStateException("You are trying to write not correct bytes");
+            log.error("You are trying to write not correct bytes for piece {}", id);
+            return false;
         }
     }
 
     private boolean[] findBitField() {
-        boolean[] bitField = new boolean[piecesCount];
-
-        for (int i = 0; i < piecesCount; i++) {
-            int fromBytes = this.pieceSize * i;
-
-            int toBytes;
-            if (piecesCount - 1 == i) { // If it's the last piece
-                toBytes = this.existingBytes.length;
-            } else {
-                toBytes = this.pieceSize * (i + 1);
-            }
-
-            byte[] pieceBytes = Arrays.copyOfRange(this.existingBytes, fromBytes, toBytes);
-
-            Piece piece = new Piece(i, this.torrent, pieceBytes, this.downloadFileDir);
-
-            // verifying if the bytes really correspond to torrent file metadata
-            bitField[i] = piece.isValid();
+        String fullPath = this.downloadFileDir + File.separator + this.torrent.getName();
+        File downloadedTorrent = new File(fullPath);
+        if (downloadedTorrent.isDirectory()) {
+            return findBitFieldFromDirectory(fullPath);
+        } else if (downloadedTorrent.isFile()) {
+            return findBitFieldFromSingleFile(fullPath);
+        } else { // such file/folder does not exist
+            boolean[] bitField = new boolean[piecesCount];
+            Arrays.fill(bitField, false);
+            return bitField;
         }
-
-        return bitField;
     }
 
-    private byte[] getDictionaryBytes(String dirPath) throws IOException {
-        byte[] bytes = new byte[0];
+    private boolean[] findBitFieldFromDirectory(String folderLoc) {
+        try {
+            boolean[] bitField = new boolean[piecesCount];
+            int currentPiece = 0;
+            int bytesReadForPiece = 0;
+            byte[] pieceBytes = new byte[0];
+
+            for (TorrentFile torrentFile : torrent.getFileList()) {
+                String filepath = folderLoc + File.separator + String.join(File.separator, torrentFile.getFileDirs());
+                long bytesReadFromFile = 0;
+                RandomAccessFile file = new RandomAccessFile(filepath, "r");
+
+                // reading bytes from while according to piece size until all bytes from the file are read
+                while (bytesReadFromFile != file.length()) {
+                    int nrOfBytesToRead = calcBytesCount(file.getFilePointer(), bytesReadForPiece, pieceSize, file.length());
+                    byte[] bytes = new byte[nrOfBytesToRead];
+                    file.read(bytes);
+                    bytesReadForPiece += nrOfBytesToRead;
+                    bytesReadFromFile += nrOfBytesToRead;
+                    pieceBytes = ArrayUtils.addAll(pieceBytes, bytes);
+
+                    if (bytesReadForPiece == pieceSize) {  // we have a full piece
+                        Piece piece = new Piece(currentPiece, this.torrent, pieceBytes, this.downloadFileDir);
+                        pieceBytes = new byte[0];
+                        bitField[currentPiece] = piece.isValid();
+                        currentPiece++;
+                        bytesReadForPiece = 0;
+                    }
+                }
+                file.close();
+
+                if (!Arrays.equals(pieceBytes, new byte[0])) {  // if last piece isn't exactly full, then we need to add it
+                    Piece piece = new Piece(currentPiece, this.torrent, pieceBytes, this.downloadFileDir);
+                    bitField[currentPiece] = piece.isValid();
+                }
+            }
+            return bitField;
+        } catch (IOException e) {
+            boolean[] bitField = new boolean[piecesCount];
+            Arrays.fill(bitField, false);
+            return bitField;
+        }
+    }
+
+    private boolean[] findBitFieldFromSingleFile(String filepath) {
+        try {
+            boolean[] bitField = new boolean[piecesCount];
+            RandomAccessFile file = new RandomAccessFile(filepath, "r");
+            byte[] bytes;
+
+            for (int i = 0; i < piecesCount; i++) {
+                int bytesCount = calcBytesCount(file.getFilePointer(), pieceSize, file.length());
+                bytes = new byte[bytesCount];
+                file.read(bytes);
+                Piece piece = new Piece(i, this.torrent, bytes, this.downloadFileDir);
+
+                // verifying if the bytes really correspond to torrent file metadata
+                bitField[i] = piece.isValid();
+            }
+            file.close();
+            return bitField;
+        } catch (IOException e) {  // it means that the file doesn't exist, so all bits are 0.
+            boolean[] bitField = new boolean[piecesCount];
+            Arrays.fill(bitField, false);
+            return bitField;
+        }
+    }
+
+    private Piece getPieceByIdForSingleFile(int id) throws IOException {
+        long fromBytes = (long) this.pieceSize * (long) id;
+        String filePath = downloadFileDir + File.separator + this.torrent.getName();
+        RandomAccessFile file = new RandomAccessFile(filePath, "r");
+        file.seek(fromBytes);
+
+        int numberOfBytesBeforeFileEnd = calcBytesCount(file.getFilePointer(), pieceSize, file.length());
+        byte[] currentPieceBytes = new byte[numberOfBytesBeforeFileEnd];
+        file.read(currentPieceBytes);
+        file.close();
+        return returnPiece(new Piece(id, this.torrent, currentPieceBytes, this.downloadFileDir));
+    }
+
+    private Piece getPieceByIdForDirectory(int id) throws IOException {
+        long fromByte = (long) this.pieceSize * (long) id;
+        long currentByte = 0;
+        byte[] pieceBytes = new byte[0];
 
         for (TorrentFile torrentFile : torrent.getFileList()) {
-            Path path = Paths.get(dirPath, torrentFile.getFileDirs().toArray(new String[0]));
+            // we have to take some bytes from that file
+            if (currentByte + pieceBytes.length + torrentFile.getFileLength() >= fromByte) {
+                String filePath = downloadFileDir + File.separator + this.torrent.getName() +
+                        File.separator + String.join(File.separator, torrentFile.getFileDirs());
+                long pieceStartByteInFile = fromByte + pieceBytes.length - currentByte;
 
-            if (Files.exists(path)) {
-                byte[] fileContent = Files.readAllBytes(path);
-                bytes = ArrayUtils.addAll(bytes, fileContent);
-            } else {
-                // TODO : what if file length is Long?
-                byte[] emptyBytes = new byte[torrentFile.getFileLength().intValue()];
-                bytes = ArrayUtils.addAll(bytes, emptyBytes);
+                RandomAccessFile file = new RandomAccessFile(filePath, "r");
+                int nrOfBytesToRead = calcBytesCount(pieceStartByteInFile, pieceBytes.length, pieceSize, file.length());
+                file.seek(pieceStartByteInFile);
+                byte[] currentFileBytes = new byte[nrOfBytesToRead];
+                file.read(currentFileBytes);
+                file.close();
+                pieceBytes = ArrayUtils.addAll(pieceBytes, currentFileBytes);
+
+                if (pieceBytes.length == pieceSize) {
+                    return returnPiece(new Piece(id, this.torrent, pieceBytes, this.downloadFileDir));
+                }
             }
+            currentByte += torrentFile.getFileLength();
         }
-        return bytes;
+        // adding last piece which might not be with complete length
+        return returnPiece(new Piece(id, this.torrent, pieceBytes, this.downloadFileDir));
     }
 
-    private byte[] getFileBytes(Path path) throws IOException {
-        return Files.readAllBytes(path);
-    }
-
-    private Piece getPieceByIdForSingleFile(int id) {
-        int fromBytes = this.pieceSize * id;
-
-        int toBytes;
-        if (piecesCount - 1 == id) { // If it's the last piece
-            toBytes = this.existingBytes.length;
-        } else {
-            toBytes = this.pieceSize * (id + 1);
-        }
-
-        byte[] currentPieceBytes = Arrays.copyOfRange(this.existingBytes, fromBytes, toBytes);
-
-        Piece piece = new Piece(id, this.torrent, currentPieceBytes, this.downloadFileDir);
-
+    private Piece returnPiece(Piece piece) {
         if (piece.isValid()) {
             return piece;
         } else {
             throw new AssertionError("Piece is either not downloaded or there's a mistake in the code");
-        }
-    }
-
-    private Piece getPieceByIdForDirectory(int id) {
-        int endIndex = this.torrent.getPieceLength().intValue() * (id + 1);
-        if (endIndex > this.existingBytes.length) {  // last piece is not full piece
-            endIndex = this.existingBytes.length;
-        }
-        byte[] currentPieceBytes = Arrays.copyOfRange(
-                this.existingBytes,
-                this.torrent.getPieceLength().intValue() * id,
-                endIndex
-        );
-
-        Piece piece = new Piece(id, this.torrent, currentPieceBytes, this.downloadFileDir);
-        if (piece.isValid()) {
-            return piece;
-        } else {
-            throw new IllegalStateException("Piece is either not downloaded or there's a mistake in " +
-                    "the code with piece " + "id = " + id);
         }
     }
 
@@ -206,5 +247,4 @@ public class PiecesHandler {
         }
         return existingPieces;
     }
-
 }

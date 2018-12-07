@@ -4,6 +4,7 @@ import be.christophedetroyer.torrent.Torrent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ut.ee.torry.client.event.BitField;
+import ut.ee.torry.client.event.ErroredRequest;
 import ut.ee.torry.client.event.Handshake;
 import ut.ee.torry.client.event.Have;
 import ut.ee.torry.client.event.RequestPiece;
@@ -15,15 +16,15 @@ import ut.ee.torry.common.TrackerResponse;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -39,9 +40,10 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     private final ScheduledExecutorService requesterExecutor = Executors.newSingleThreadScheduledExecutor();
     private final ScheduledExecutorService requestedPiecesExecutor = Executors.newSingleThreadScheduledExecutor();
 
-    private static final long DEFAULT_ANNOUNCE_INTERVAL = 10L;
+    private static final long DEFAULT_ANNOUNCE_INTERVAL = 5L;
     private static final long DEFAULT_REQUESTED_PIECES_CLEANING_INTERVAL = 10L;
-    private static final long DEFAULT_REQUEST_INTERVAL = 10L;
+    private static final long REQUEUE_HANDSHAKE_INTERVAL = 5L;
+    private static final long DEFAULT_REQUEST_INTERVAL = 30L;
 
     private final String peerId;
     private final int port;
@@ -53,8 +55,8 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     private final Announcer announcer;
     private final BlockingQueue<TorryRequest> eventQueue;
     private final BlockingQueue<RequestPiece> seedQueue;
-    private final Map<String, PeerState> peers = new ConcurrentHashMap<>();
-    private final Set<String> queuedHandshakes = new HashSet<>();
+    private final ConcurrentMap<String, PeerState> peers = new ConcurrentHashMap<>();
+    private final Set<Handshake> queuedHandshakes = ConcurrentHashMap.newKeySet();
     private final Set<Integer> requestedPieces = ConcurrentHashMap.newKeySet();
 
     public TorrentTask(
@@ -64,7 +66,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
             String downloadDir,
             Announcer announcer,
             BlockingQueue<TorryRequest> eventQueue
-    ) throws IOException {
+    ) {
         this.peerId = peerId;
         this.port = port;
         this.torrent = torrent;
@@ -77,6 +79,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         startSeeder();
         startRequester();
         startRequestedPiecesCleaner();
+        startDelayedHandshakeRequeur();
     }
 
     public void announceStop() {
@@ -89,7 +92,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                         port,
                         this.uploaded,
                         piecesHandler.getBytesDownloaded(),
-                        torrent.getTotalSize() - piecesHandler.getBytesDownloaded()
+                        piecesHandler.getTotalSize() - piecesHandler.getBytesDownloaded()
                 ).withEvent("stop")
         );
     }
@@ -126,6 +129,29 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         );
     }
 
+    private void startDelayedHandshakeRequeur() {
+        log.info("Running requested pieces cleaner");
+        requestedPiecesExecutor.scheduleAtFixedRate(
+                this::reQueueHandshakes,
+                REQUEUE_HANDSHAKE_INTERVAL,
+                REQUEUE_HANDSHAKE_INTERVAL,
+                TimeUnit.SECONDS
+        );
+    }
+
+    private void reQueueHandshakes() {
+        synchronized (queuedHandshakes) {
+            queuedHandshakes.forEach(handshake -> {
+                try {
+                    eventQueue.put(handshake);
+                } catch (InterruptedException e) {
+                    log.error("Unable to requeue handshake: ", e);
+                }
+            });
+            queuedHandshakes.clear();
+        }
+    }
+
     private void startRequester() {
         log.info("Running piece requester");
         requesterExecutor.scheduleAtFixedRate(
@@ -143,7 +169,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                         port,
                         this.uploaded,
                         piecesHandler.getBytesDownloaded(),
-                        torrent.getTotalSize() - piecesHandler.getBytesDownloaded()
+                        piecesHandler.getTotalSize() - piecesHandler.getBytesDownloaded()
                 )
         );
 
@@ -157,12 +183,6 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                     try {
                         PeerState peerState = new PeerState(peer);
                         peerState.sendHandShake(torrent, peerId);
-                        // If handshake was already sent by the peer
-                        if (queuedHandshakes.contains(peer.getId())) {
-                            peerState.receivedHandshake();
-                            queuedHandshakes.remove(peer.getId());
-                            peerState.sendBitField(piecesHandler.getBitField());
-                        }
                         peers.put(peer.getId(), peerState);
                     } catch (IOException e) {
                         log.error("Unable to add tracked peer: ", e);
@@ -204,40 +224,50 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         }
     }
 
-    private void sendHaveToAllPeers(int index) throws IOException {
+    private void prodCastHave(int index) {
         // Send have to all peers
-        for (PeerState peerState : peers.values()) {
+        Collection<PeerState> values = new ArrayList<>(peers.values());
+        for (PeerState peerState : values) {
             // Only send if handshake is established and BitField is set
             if (peerState.handshakeDone() && peerState.bitFieldSet()) {
-                peerState.sendHave(index);
+                try {
+                    peerState.sendHave(index);
+                } catch (IOException e) {
+                    String id = peerState.getPeer().getId();
+                    log.warn("Connection with peer {} lost, removing.", id);
+                    peers.remove(id);
+                }
             }
         }
     }
 
     private void request() {
-        List<Integer> existing = new ArrayList<>(piecesHandler.getNotExistingPieceIndexes());
-        // Request a random not existing piece
-        int index = existing.get(random.nextInt(existing.size()));
+        List<Integer> nonExisting = new ArrayList<>(piecesHandler.getNotExistingPieceIndexes());
 
-        ArrayList<PeerState> peerStates = new ArrayList<>(peers.values());
+        if (!nonExisting.isEmpty()) {
+            // Request a random not existing piece
+            int index = nonExisting.get(random.nextInt(nonExisting.size()));
 
-        // Request from all tracked peers
-        for (PeerState peerState : peerStates) {
-            // Request only if we haven't asked it in the last 10 seconds
-            if (!requestedPieces.contains(index)) {
-                // Request only if:
-                //  1. Handshake is established
-                //  2. BitField is set
-                //  3. Peer has that the requested piece
-                if (peerState.handshakeDone() && peerState.bitFieldSet() && peerState.hasPiece(index)) {
-                    Peer peer = peerState.getPeer();
-                    try {
-                        peerState.sendRequestPiece(index);
-                        requestedPieces.add(index);
-                        log.info("Sent piece request for piece with index {} to peer {}.", index, peer);
-                    } catch (IOException e) {
-                        peers.remove(peer.getId());
-                        log.error("Failed to seed to peer {}. Closing connection:", peer, e);
+            ArrayList<PeerState> peerStates = new ArrayList<>(peers.values());
+
+            // Request from all tracked peers
+            for (PeerState peerState : peerStates) {
+                // Request only if we haven't asked it in the last 10 seconds
+                if (!requestedPieces.contains(index)) {
+                    // Request only if:
+                    //  1. Handshake is established
+                    //  2. BitField is set
+                    //  3. Peer has that the requested piece
+                    if (peerState.handshakeDone() && peerState.bitFieldSet() && peerState.hasPiece(index)) {
+                        Peer peer = peerState.getPeer();
+                        try {
+                            peerState.sendRequestPiece(index);
+                            requestedPieces.add(index);
+                            log.info("Sent piece request for piece with index {} to peer {}.", index, peer);
+                        } catch (IOException e) {
+                            peers.remove(peer.getId());
+                            log.error("Failed to seed to peer {}. Closing connection:", peer, e);
+                        }
                     }
                 }
             }
@@ -256,14 +286,24 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
             TorryRequest event = eventQueue.take();
             log.info("Received event: {}", event);
 
-            if (event instanceof SendPiece) {
+            if (event instanceof ErroredRequest) {
+                ErroredRequest erroredRequest = (ErroredRequest) event;
+                synchronized (peers) {
+                    peers.remove(erroredRequest.getPeerId());
+                }
+            } else if (event instanceof SendPiece) {
                 SendPiece sendPiece = (SendPiece) event;
                 try {
-                    if (!piecesHandler.hasPiece(sendPiece.getIndex())) {
+                    short index = sendPiece.getIndex();
+                    if (!piecesHandler.hasPiece(index)) {
                         log.info("Writing piece {}", sendPiece);
-                        piecesHandler.writePiece(sendPiece.getIndex(), sendPiece.getBytes());
-                        sendHaveToAllPeers(sendPiece.getIndex());
-                        log.info("Successfully wrote piece {}", sendPiece);
+                        boolean suc = piecesHandler.writePiece(index, sendPiece.getBytes());
+                        if (suc) {
+                            prodCastHave(index);
+                            log.info("Successfully wrote piece {}", sendPiece);
+                        } else {
+                            log.warn("Failed to write piece {}", index);
+                        }
                     }
                 } catch (IOException e) {
                     log.error("Unable to write received piece: ", e);
@@ -281,21 +321,30 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                         peerState.receivedHandshake();
                         peerState.sendBitField(piecesHandler.getBitField());
                     } else {
-                        queuedHandshakes.add(handshake.getPeerId());
+                        queuedHandshakes.add(handshake);
                     }
                 }
             } else if (event instanceof BitField) {
                 BitField bitField = (BitField) event;
                 synchronized (peers) {
-                    peers.get(bitField.getPeerId()).setBitField(bitField.getBitField());
+                    String peerId = bitField.getPeerId();
+                    if (peers.containsKey(peerId)) {
+                        peers.get(peerId).setBitField(bitField.getBitField());
+                    } else {
+                        log.warn("Received bit field from {} but this peer is unknown.", peerId);
+                    }
                 }
             } else if (event instanceof Have) {
                 Have have = (Have) event;
                 synchronized (peers) {
-                    peers.get(have.getPeerId()).setPeerHave(have.getIndex());
+                    String peerId = have.getPeerId();
+                    if (peers.containsKey(peerId) && peers.get(peerId).bitFieldSet()) {
+                        peers.get(peerId).setPeerHave(have.getIndex());
+                    } else {
+                        log.warn("Received have from {} but this peer is unknown.", peerId);
+                    }
                 }
             }
-            // TODO: handle other events
         }
 
         return this;

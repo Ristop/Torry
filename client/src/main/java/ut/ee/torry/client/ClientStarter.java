@@ -87,7 +87,7 @@ public class ClientStarter {
     /**
      * Entry point for starting downloads.
      */
-    private void downloadTorrents() throws InterruptedException, ExecutionException, IOException {
+    private void downloadTorrents() throws InterruptedException, ExecutionException {
 
         // Start listener
         ExecutorService executorService = Executors.newSingleThreadExecutor();
