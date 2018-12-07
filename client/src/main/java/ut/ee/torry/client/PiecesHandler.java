@@ -55,6 +55,7 @@ public class PiecesHandler {
     }
 
     public Piece getPiece(int id) throws IOException {
+        System.out.println("Reading piece: " + id);
         if (torrent.isSingleFileTorrent()) {
             return getPieceByIdForSingleFile(id);
         } else {
@@ -159,7 +160,7 @@ public class PiecesHandler {
     }
 
     private Piece getPieceByIdForSingleFile(int id) throws IOException {
-        long fromBytes = this.pieceSize * id;
+        long fromBytes = (long) this.pieceSize * (long) id;
         String filePath = downloadFileDir + File.separator + this.torrent.getName();
         RandomAccessFile file = new RandomAccessFile(filePath, "r");
         file.seek(fromBytes);
