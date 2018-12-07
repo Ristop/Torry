@@ -173,7 +173,7 @@ public class PiecesHandler {
     }
 
     private Piece getPieceByIdForDirectory(int id) throws IOException {
-        long fromByte = this.pieceSize * id;
+        long fromByte = (long) this.pieceSize * (long) id;
         long currentByte = 0;
         byte[] pieceBytes = new byte[0];
 

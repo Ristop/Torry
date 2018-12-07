@@ -73,7 +73,7 @@ public class Piece {
     }
 
     private void writeBytesToFile() throws IOException {
-        long pieceStartLoc = torrent.getPieceLength() * id;
+        long pieceStartLoc = (long) torrent.getPieceLength() * (long) id;
         RandomAccessFile file = new RandomAccessFile(this.path, "rw");
         file.seek(pieceStartLoc);
         file.write(this.bytes);
@@ -117,7 +117,7 @@ public class Piece {
     }
 
     private void writeBytesToDir() throws IOException {
-        long pieceStartIndex = this.id * this.torrent.getPieceLength();
+        long pieceStartIndex = (long) this.id * (long) this.torrent.getPieceLength();
         long currentByteIndexInDir = 0;
         int bytesWritten = 0;
 
