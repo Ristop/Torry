@@ -23,6 +23,7 @@ public class PerformanceTest {
         this.filePath = filePath;
         this.iterations_nr = 100;
         this.file_to_test = file_to_test;
+        this.start = System.currentTimeMillis();
     }
 
     public PerformanceTest(String filePath, String file_to_test,  int iterations_nr){

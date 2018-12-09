@@ -49,6 +49,8 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     private final BlockingQueue<RequestPiece> seedQueue;
     private final Map<Peer, PeerState> peers = new ConcurrentHashMap<>();
 
+    private boolean keepGoing;
+
     private final PerformanceTest performanceTest;
 
     public TorrentTask(
@@ -59,6 +61,8 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
             Announcer announcer,
             BlockingQueue<TorrentRequest> eventQueue
     ) throws IOException {
+
+        this.keepGoing = true;
         this.peerId = peerId;
         this.port = port;
         this.torrent = torrent;
@@ -66,11 +70,12 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         this.announcer = announcer;
         this.eventQueue = eventQueue;
         this.piecesHandler = new PiecesHandler(torrent, downloadDir);
-        this.performanceTest = new PerformanceTest("./client/src/main/java/performance_testing/times_for_1MB.txt",piecesHandler.getFilePath(), 5);
+        this.performanceTest = new PerformanceTest("./client/src/main/java/performance_testing/times_for_10MB.txt",piecesHandler.getFilePath());
         seedQueue = new ArrayBlockingQueue<>(32);
         startAnnouncer();
         startSeeder();
         startRequester();
+
     }
 
     public void announceStop() {
@@ -172,24 +177,17 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     }
 
     private void request() {
-        performanceTest.startClockIfNotStarted();
+    //    performanceTest.startClockIfNotStarted();
 
         List<Integer> existing = new ArrayList<>(piecesHandler.getNotExistingPieceIndexes());
 
         if(existing.isEmpty()){
             performanceTest.stopClock();
             performanceTest.writeTimeToFile();
-
-            if(performanceTest.getIterations_nr()>0) {
-                performanceTest.deleteFile();
-                piecesHandler.setExistingPieceIndexesBackToZero();
-                existing = new ArrayList<>(piecesHandler.getNotExistingPieceIndexes());
-
-            }else{
-                performanceTest.deleteFile();
-                log.info(piecesHandler.getFilePath());
-                log.info("Performance tesing done");
-            }
+            log.info("Performance tesing done for file: {}", piecesHandler.getFilePath());
+            performanceTest.deleteFile();
+            requesterExecutor.shutdown();
+            this.keepGoing = false;
         }
 
         int index = existing.get(random.nextInt(existing.size()));
@@ -219,8 +217,30 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
         log.info("Not existing pieces: {}", piecesHandler.getNotExistingPieceIndexes());
         log.info("Torrent pieces count: {}", torrent.getPieces().size());
 
+
         while (!Thread.currentThread().isInterrupted()) {
-            TorrentRequest event = eventQueue.take();
+
+
+
+  //          TorrentRequest event = eventQueue.take();
+            TorrentRequest event;
+              do{
+                  event = eventQueue.poll(20, TimeUnit.SECONDS);
+
+              }while(keepGoing && event == null);
+
+
+            if(!keepGoing && event == null){
+                try {
+                    close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                announceExecutor.shutdown();
+                seederExecutor.shutdown();
+                return this;
+            }
+
             log.info("Received event: {}", event);
 
             if (event instanceof SendPiece) {
@@ -239,9 +259,11 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                 if (!seedQueue.contains(reqEvent)) {
                     seedQueue.put(reqEvent);
                 }
+
             }
             // TODO: handle other events
         }
+
 
         return this;
     }

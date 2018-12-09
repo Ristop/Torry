@@ -84,33 +84,63 @@ public class ClientStarter {
      * Entry point for starting downloads. WORK IN PROGRESS and not yet fully implemented
      */
     private void downloadTorrents() throws InterruptedException, ExecutionException, IOException {
+        int iterations_nr = 10;
 
         // Start listener
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         BlockingQueue<TorrentRequest> queue = new ArrayBlockingQueue<>(10);
         executorService.execute(new ClientServerListener(port, queue));
 
-        CompletionService<TorrentTask> completionService = new ExecutorCompletionService<>(this.executorService);
 
-        // Create a task for each torrent.
-        for (Torrent torrent : torrents) {
-            torrentTasks.add(new TorrentTask(peerId, port, torrent, downloadedFiledDir, announcer, queue));
-        }
 
-        // Submit task
-        for (TorrentTask torrentTask : torrentTasks) {
-            completionService.submit(torrentTask);
-        }
 
-        // Start waiting for tasks to finish
-        for (int i = 0; i < torrents.size(); i++) {
-            Future<TorrentTask> future = completionService.take();
 
-            TorrentTask downloadTorrentTask = future.get();
-            log.info("{} finished.", downloadTorrentTask);
-        }
+
+            CompletionService<TorrentTask> completionService = new ExecutorCompletionService<>(this.executorService);
+
+            // Create a task for each torrent.
+            for (Torrent torrent : torrents) {
+                completionService.submit(new TorrentTask(peerId, port, torrent, downloadedFiledDir, announcer, queue));
+
+                Future<TorrentTask> future = completionService.take();
+
+                TorrentTask downloadTorrentTask = future.get();
+                log.info("{} finished.", downloadTorrentTask);
+                queue.clear();
+            }
+
+            torrentTasks.clear();
+
 
         this.executorService.shutdownNow();
-    }
+        log.info("Jõudis siia");
 
+
+//        for (int j = 0; j< iterations_nr; j++) {
+//
+//
+//        CompletionService<TorrentTask> completionService = new ExecutorCompletionService<>(this.executorService);
+//
+//            // Create a task for each torrent.
+//            for (Torrent torrent : torrents) {
+//                torrentTasks.add(new TorrentTask(peerId, port, torrent, downloadedFiledDir, announcer, queue));
+//            }
+//            // Submit task
+//            for (TorrentTask torrentTask : torrentTasks) {
+//                completionService.submit(torrentTask);
+//            }
+//            // Start waiting for tasks to finish
+//            for (int i = 0; i < torrents.size(); i++) {
+//                Future<TorrentTask> future = completionService.take();
+//
+//                TorrentTask downloadTorrentTask = future.get();
+//                log.info("{} finished.", downloadTorrentTask);
+//            }
+//            queue.clear();
+//            torrentTasks.clear();
+//
+//        }
+//        this.executorService.shutdownNow();
+//        log.info("Jõudis siia");
+    }
 }
