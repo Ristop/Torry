@@ -42,7 +42,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     private final ScheduledExecutorService requestedPiecesExecutor = Executors.newSingleThreadScheduledExecutor();
 
     private static final long DEFAULT_ANNOUNCE_INTERVAL = 5L;
-    private static final long DEFAULT_REQUESTED_PIECES_CLEANING_INTERVAL = 40L;
+    private static final long DEFAULT_REQUESTED_PIECES_CLEANING_INTERVAL = 60L;
     private static final long REQUEUE_HANDSHAKE_INTERVAL = 5L;
     private static final long DEFAULT_REQUEST_INTERVAL = 100L;
 
@@ -279,7 +279,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     }
 
     @Override
-    public TorrentTask call() throws InterruptedException, IOException {
+    public TorrentTask call() throws InterruptedException {
         log.info("Starting torrent task for {}", torrent.getName());
         log.info("Existing pieces: {}", piecesHandler.getExistingPieceIndexes());
         log.info("Not existing pieces: {}", piecesHandler.getNotExistingPieceIndexes());
@@ -322,7 +322,12 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                     if (peers.containsKey(handshake.getPeerId())) {
                         PeerState peerState = peers.get(handshake.getPeerId());
                         peerState.receivedHandshake();
-                        peerState.sendBitField(piecesHandler.getBitField());
+                        try {
+                            peerState.sendBitField(piecesHandler.getBitField());
+                        } catch (IOException e) {
+                            log.error("Sending bit field failed due to {}, removing peer.", e.getMessage());
+                            peers.remove(handshake.getPeerId());
+                        }
                     } else {
                         queuedHandshakes.add(handshake);
                     }
