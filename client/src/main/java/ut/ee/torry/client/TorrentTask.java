@@ -41,7 +41,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     private final ScheduledExecutorService requestedPiecesExecutor = Executors.newSingleThreadScheduledExecutor();
 
     private static final long DEFAULT_ANNOUNCE_INTERVAL = 5L;
-    private static final long DEFAULT_REQUESTED_PIECES_CLEANING_INTERVAL = 10L;
+    private static final long DEFAULT_REQUESTED_PIECES_CLEANING_INTERVAL = 40L;
     private static final long REQUEUE_HANDSHAKE_INTERVAL = 5L;
     private static final long DEFAULT_REQUEST_INTERVAL = 30L;
 
