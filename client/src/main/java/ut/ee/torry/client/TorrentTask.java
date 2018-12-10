@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -43,7 +44,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
     private static final long DEFAULT_ANNOUNCE_INTERVAL = 5L;
     private static final long DEFAULT_REQUESTED_PIECES_CLEANING_INTERVAL = 40L;
     private static final long REQUEUE_HANDSHAKE_INTERVAL = 5L;
-    private static final long DEFAULT_REQUEST_INTERVAL = 30L;
+    private static final long DEFAULT_REQUEST_INTERVAL = 100L;
 
     private final String peerId;
     private final int port;
@@ -248,7 +249,9 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
             // Request a random not existing piece
             int index = nonExisting.get(random.nextInt(nonExisting.size()));
 
-            ArrayList<PeerState> peerStates = new ArrayList<>(peers.values());
+            List<PeerState> peerStates = new ArrayList<>(peers.values());
+
+            Collections.shuffle(peerStates);
 
             // Request from all tracked peers
             for (PeerState peerState : peerStates) {
