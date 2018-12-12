@@ -210,7 +210,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                             Piece piece = piecesHandler.getPiece(request.getIndex());
                             peerState.sendPiece(piece);
                             uploaded += piece.getBytes().length;
-                            log.info("Sent piece with index {} to peer {}.", request.getIndex(), peer);
+                            log.debug("Sent piece with index {} to peer {}.", request.getIndex(), peer);
                         } catch (IOException e) {
                             peers.remove(peer.getId());
                             log.error("Failed to seed to peer {}. Closing connection:", peer, e);
@@ -266,7 +266,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                         try {
                             peerState.sendRequestPiece(index);
                             requestedPieces.add(index);
-                            log.info("Sent piece request for piece with index {} to peer {}.", index, peer);
+                            log.debug("Sent piece request for piece with index {} to peer {}.", index, peer);
                         } catch (IOException e) {
                             peers.remove(peer.getId());
                             log.error("Failed to seed to peer {}. Closing connection:", peer, e);
@@ -287,7 +287,7 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
 
         while (!Thread.currentThread().isInterrupted()) {
             TorryRequest event = eventQueue.take();
-            log.info("Received event: {}", event);
+            log.debug("Received event: {}", event);
 
             if (event instanceof ErroredRequest) {
                 ErroredRequest erroredRequest = (ErroredRequest) event;
@@ -299,11 +299,11 @@ public class TorrentTask implements Callable<TorrentTask>, AutoCloseable {
                 try {
                     short index = sendPiece.getIndex();
                     if (!piecesHandler.hasPiece(index)) {
-                        log.info("Writing piece {}", sendPiece);
+                        log.debug("Writing piece {}", sendPiece);
                         boolean suc = piecesHandler.writePiece(index, sendPiece.getBytes());
                         if (suc) {
                             prodCastHave(index);
-                            log.info("Successfully wrote piece {}", sendPiece);
+                            log.debug("Successfully wrote piece {}", sendPiece);
                         } else {
                             log.warn("Failed to write piece {}", index);
                         }

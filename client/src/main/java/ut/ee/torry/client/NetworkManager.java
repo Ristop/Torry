@@ -108,7 +108,7 @@ public class NetworkManager implements AutoCloseable {
         dos.writeShort(index);
         dos.flush();
 
-        log.info("Sent request piece request <len:{}><id:{}><index:{}>", len, id, index);
+        log.debug("Sent request piece request <len:{}><id:{}><index:{}>", len, id, index);
     }
 
     /**
