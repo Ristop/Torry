@@ -134,24 +134,24 @@ public class ClientServerListener implements Runnable {
 
         if (id == 4) {
             short index = dis.readShort();
-            log.info("Received have from peer {}", peerId);
+            log.debug("Received have from peer {}", peerId);
             return new Have(peerId, index);
         } else if (id == 5) {
             boolean[] bitfield = new boolean[len - 1];
             for (int i = 0; i < len - 1; i++) {
                 bitfield[i] = dis.readBoolean();
             }
-            log.info("Received bitField <bitfield:<omitted>> from peer {}", peerId);
+            log.debug("Received bitField <bitfield:<omitted>> from peer {}", peerId);
             return new BitField(bitfield, peerId);
         } else if (id == 6) {
             short index = dis.readShort();
-            log.info("Received request piece <len:{}><id:{}><index:{}>", len, id, index);
+            log.debug("Received request piece <len:{}><id:{}><index:{}>", len, id, index);
             return new RequestPiece(index, peerId);
         } else if (id == 7) {
             short index = dis.readShort();
             byte[] bytes = new byte[len - 5];
             dis.readFully(bytes);
-            log.info("Received piece <len:{}><id:{}><index:{}><data:<omitted>>", len, id, index);
+            log.debug("Received piece <len:{}><id:{}><index:{}><data:<omitted>>", len, id, index);
             return new SendPiece(index, bytes);
         } else {
             log.error("Received event with id {} which is not yet supported or unknown.", id);
