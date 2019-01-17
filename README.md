@@ -4,7 +4,9 @@
 
 This repository contains an implementation of BitTorrent specification (https://wiki.theory.org/index.php/BitTorrentSpecification) with some adjustments.
 
-Project documentation can be found [here]() (temporarily removed).
+Project documentation can be found:
+https://www.overleaf.com/read/mjffctdwdngg
+
 
 ## Building the project
 
